@@ -13,8 +13,8 @@ def run__injection_gateway_test():
     canoe.set_system_variable_value("PACCAR_HASI::Trigger", 1)
    
     # CAN ID 2
-    canoe.set_system_variable_value("PACCAR_HASI::CAN_ID_TX", 0x1C000127)
-    canoe.set_system_variable_value("PACCAR_HASI::Trigger", 1)
+    #canoe.set_system_variable_value("PACCAR_HASI::CAN_ID_TX", 0x18DAF903)
+    #canoe.set_system_variable_value("PACCAR_HASI::Trigger", 1)
     
     canoe.stop_measurement()
 
