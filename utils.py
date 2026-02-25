@@ -29,14 +29,16 @@ def scrape_dbc_for_gateways(filePath:str):
     """    
     try:
         dbcFile = open(filePath, 'r')
-        dbcFile.readable()
         # If we could not open the file
     except OSError:
         print("Error: could not open/read file ", filePath)
         sys.exit()
     
+    # Appending 'scrapedGateways_to the provided .dbc filename 
+    scrapedName = "scrapedGateways_" + filePath.split('/')[-1]
+    
     try:
-        scrapedGatewaysFile = open("scrapedGateways.dbc", 'w')
+        scrapedGatewaysFile = open(scrapedName, 'w')
     except OSError:
         print("Error: could not open scrapedGatewayFile")
         sys.exit()
@@ -64,7 +66,7 @@ def scrape_dbc_for_gateways(filePath:str):
                     arbitrationID = arbitrationID.split(" ")[2].strip()
                     # print(arbitrationID)  # Debug
                     # Note that in python, hex numbers are ints under the hood
-                    arbitrationID = arbitrationID_toHex(arbitrationID)
+                    # arbitrationID = arbitrationID_toHex(arbitrationID)
                     
                     # In case there are multiple gateways
                     allGateways = curLineParsed[3].split(",")
@@ -98,7 +100,7 @@ def scrape_dbc_for_gateways(filePath:str):
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         if (sys.argv[1] == "gateway.dbc"):
-            userInput = input("Caution: if 'scrapedGateways.dbc' already exists, it will be overwritten. Proceed? [y/n]")
+            userInput = input("Caution: if 'scrapedGateways_" + sys.argv[2] + "' already exists,\nit will be overwritten. Proceed? [y/n]")
             if userInput.lower() == 'y':
                 inputFilePath = sys.argv[2]
                 scrape_dbc_for_gateways(inputFilePath)
