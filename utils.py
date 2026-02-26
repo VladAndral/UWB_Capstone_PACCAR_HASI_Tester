@@ -26,6 +26,9 @@ def scrape_dbc_for_gateways(filePath:str):
 
     Args:
         filePath (str): The filepath (absolute or local) of the `.dbc` file to be scraped
+        
+    Returns:
+        scrapedName (str): The filepath of the results of the scraped `.dbc`
     """    
     try:
         dbcFile = open(filePath, 'r')
@@ -35,6 +38,7 @@ def scrape_dbc_for_gateways(filePath:str):
         sys.exit()
     
     # Appending 'scrapedGateways_to the provided .dbc filename 
+    # Python indexing [-1] indexes the last element of a list
     scrapedName = "scrapedGateways_" + filePath.split('/')[-1]
     
     try:
@@ -45,10 +49,11 @@ def scrape_dbc_for_gateways(filePath:str):
     
     with dbcFile, scrapedGatewaysFile:
         # Get the first line (fencepost problem)
-        curLineRaw = dbcFile.readline()
-        while curLineRaw: # While there's still a line in the file
+        scrapedGatewaysFile.write("Gateways scraped from: " + filePath + "\n")
+        curLineUnparsed = dbcFile.readline()
+        while curLineUnparsed: # While there's still a line in the file
             # Splitting by double quotes, rather than spaces, makes things slightly easier
-            curLineParsed = curLineRaw.split('"')
+            curLineParsed = curLineUnparsed.split('"')
             # All gateways necessarily start with 'BA_ "Network"'
             # Note that not every line with 'BA_ "Network"' is a gateway
             if len(curLineParsed) > 2 and curLineParsed[0].strip() == "BA_" and curLineParsed[1].strip() == "Network":
@@ -90,20 +95,23 @@ def scrape_dbc_for_gateways(filePath:str):
                     matches this regex { \d ".*:.*"; }
                     
                 '''
-                # match = re.search(r'\d ".*:.*";', curLineRaw)
+                # match = re.search(r'\d ".*:.*";', curLineUnparsed)
                 
-            curLineRaw = dbcFile.readline()
-            
-
+            curLineUnparsed = dbcFile.readline()
     
-                
+    return scrapedName
+                        
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         if (sys.argv[1] == "gateway.dbc"):
             userInput = input("Caution: if 'scrapedGateways_" + sys.argv[2] + "' already exists,\nit will be overwritten. Proceed? [y/n]")
             if userInput.lower() == 'y':
+                print("Writing...")
                 inputFilePath = sys.argv[2]
                 scrape_dbc_for_gateways(inputFilePath)
+                print("Done.")
+            else:
+                print("Not scraping")
         elif (sys.argv[1] == "hex"):
            arbitrationID_toHex(int(sys.argv[2])) 
     else:
