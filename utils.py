@@ -36,20 +36,13 @@ def scrape_dbc_for_gateways(filePath:str):
     except OSError:
         print("Error: could not open/read file ", filePath)
         sys.exit()
+
     
-    # Appending 'scrapedGateways_to the provided .dbc filename 
-    # Python indexing [-1] indexes the last element of a list
-    scrapedName = "scrapedGateways_" + filePath.split('/')[-1]
-    
-    try:
-        scrapedGatewaysFile = open(scrapedName, 'w')
-    except OSError:
-        print("Error: could not open scrapedGatewayFile")
-        sys.exit()
-    
-    with dbcFile, scrapedGatewaysFile:
+    with dbcFile:
+        # A map of unaltered arbitration IDs to a list of all specified gateways
+        toReturn_dict:dict[str, list[str]] = {}
+        
         # Get the first line (fencepost problem)
-        scrapedGatewaysFile.write("Gateways scraped from: " + filePath + "\n")
         curLineUnparsed = dbcFile.readline()
         while curLineUnparsed: # While there's still a line in the file
             # Splitting by double quotes, rather than spaces, makes things slightly easier
@@ -75,19 +68,10 @@ def scrape_dbc_for_gateways(filePath:str):
                     
                     # In case there are multiple gateways
                     allGateways = curLineParsed[3].split(",")
+                    allGateways = [g.strip() for g in allGateways]
                     # print(allGateways)  # Debug
                     
-                    '''
-                        We now have everything we need
-                        scrapedGatewayFile format:
-                        arbitrationID;gateway gateway gateway ...
-                    '''
-                    scrapedGatewaysFile.write(str(arbitrationID))
-                    scrapedGatewaysFile.write(";")
-                    for gateway in allGateways:
-                        scrapedGatewaysFile.write(gateway.strip())
-                        scrapedGatewaysFile.write(" ")
-                    scrapedGatewaysFile.write("\n")
+                    toReturn_dict[arbitrationID] = allGateways
                 
                 '''
                     All gateway specifications start with 'BA_', followed by
@@ -99,7 +83,7 @@ def scrape_dbc_for_gateways(filePath:str):
                 
             curLineUnparsed = dbcFile.readline()
     
-    return scrapedName
+    return toReturn_dict
                         
 if __name__ == "__main__":
     if len(sys.argv) > 1:
