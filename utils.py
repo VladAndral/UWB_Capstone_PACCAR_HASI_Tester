@@ -1,6 +1,6 @@
 import sys, re
 
-def arbitrationID_toHex(arbitrationID:int):
+def format_arbitrationID(arbitrationID:str, outputType:str):
     """Converts an arbitration id in provided int form to hex
 
     Args:
@@ -11,10 +11,16 @@ def arbitrationID_toHex(arbitrationID:int):
     """
     # Convert to hex
     hexID = hex(int(arbitrationID))
-    # Convert MSB to 1
-    hexID = "0x1" + hexID[3:]
-    # Convert string to hex value
-    hexID = int(hexID, 16)
+    
+    # hexID string starts with '0x', first hex digit is at index 3
+    # The leftmost three bits of the hex should be '100', but the 
+    # rightmost bit belongs to priority. To preserve it, we will check
+    # if it is 1 by seeing if it is an odd number
+    hexID =  "0x9" + hexID[3:] if (int(hexID[2], 16) % 2) else "0x8" + hexID[3:]
+    
+    if outputType == "byte": hexID = bytes.fromhex(hexID)
+    elif outputType == "int": hexID = int(hexID, 16)
+    
     # print(hexID)  # Debug
     return hexID
 
@@ -88,15 +94,8 @@ def scrape_dbc_for_gateways(filePath:str):
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         if (sys.argv[1] == "gateway.dbc"):
-            userInput = input("Caution: if 'scrapedGateways_" + sys.argv[2] + "' already exists,\nit will be overwritten. Proceed? [y/n]")
-            if userInput.lower() == 'y':
-                print("Writing...")
-                inputFilePath = sys.argv[2]
-                scrape_dbc_for_gateways(inputFilePath)
-                print("Done.")
-            else:
-                print("Not scraping")
+            scrape_dbc_for_gateways(sys.argv[2])
         elif (sys.argv[1] == "hex"):
-           arbitrationID_toHex(int(sys.argv[2])) 
+           format_arbitrationID(sys.argv[2], sys.argv[3])
     else:
         print("Utils: Pass an argument bro")
