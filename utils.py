@@ -1,5 +1,36 @@
 import sys, re
 
+def loadFilePath(fileToLoad:str):
+    """Loads the file path specified in `filepath.txt`
+
+    Args:
+        fileToLoad (str): Args are either `primaryDBC`, `secondaryDBC`, or `cfg`
+
+    Returns:
+        str: Returns the filepath based on the spec. If none of the three specific args are entered, returns non-filepath string
+    """
+    try:
+        dbcFile = open("filepath.txt", 'r')
+        dbcFile.readable()
+        # If we could not open the file
+    except OSError:
+        print("Error: could not open/read file ", "filepath.txt")
+        sys.exit()
+        
+    with dbcFile:
+        dbcFile.readline()
+        primaryDBC = dbcFile.readline().strip()
+        dbcFile.readline()
+        secondaryDBC = dbcFile.readline().strip()
+        dbcFile.readline()
+        cfg = dbcFile.readline().strip()
+        
+        if fileToLoad == "primaryDBC": return primaryDBC
+        if fileToLoad == "secondaryDBC": return secondaryDBC
+        if fileToLoad == "cfg": return cfg
+        
+        return "no file to load specified"
+
 def format_arbitrationID(arbitrationID:str, outputType:str):
     """Converts an arbitration id in provided int form to hex
 
@@ -97,5 +128,7 @@ if __name__ == "__main__":
             scrape_dbc_for_gateways(sys.argv[2])
         elif (sys.argv[1] == "hex"):
            format_arbitrationID(sys.argv[2], sys.argv[3])
+        elif (sys.argv[1] == "loadFilePath"):
+            print(loadFilePath(sys.argv[2]))
     else:
         print("Utils: Pass an argument bro")
