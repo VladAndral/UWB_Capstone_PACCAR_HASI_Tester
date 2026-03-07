@@ -23,6 +23,12 @@ def run__injection_gateway_test(isVirtualInterface:bool):
     # Typesetting the variable given the user's choice
         # Interface is set to none to let the system autodetect, making code hardware agnostic
     # interfaceChoice:str|None = "virtual" if isVirtualInterface else "vector"
+
+    # for config in vector.get_channel_configs(): print(config)
+    # return
+
+    # cfg_path = r"C:\Users\seanb\Capstone\J1939_CAN_FD_2ch\J1939_CAN_FD_2ch.cfg"
+    # can.util.load_file_config(cfg_path)
     
     HASI_bus_list = ["VCAN1",
                     "VCAN10",
@@ -81,28 +87,6 @@ def run__injection_gateway_test(isVirtualInterface:bool):
                 #     # If the receiver did anything (it's not supposed to)
                 #     if HASI_bus_list[eachChannel[1]].recv(0.5) is not None and not busObject.send(msg):
                 #         print("FAIL2: For gateway {0} to {1} with arbitrationID {2}, receiving channel {1} woke when {3} sent the signal.".format(eachChannel[0], eachChannel[1], arbitrationID, busName))
-    
-    # canoe = CANoe()
-    
-    # cfg_path = r"C:\Users\Public\Documents\Vector\CANoe\Projects\J1939_CAN_FD_2ch\J1939_CAN_FD_2ch.cfg"
-    # canoe.open(cfg_path)
-    
-    # canoe.start_measurement()
-    
-    
-    # for arbitrationID, channelList in gatewaySpecDict.items():
-    #         for channel in channelList:
-    #             gatewayNodes = channel.split(":")
-    #             senderNode = gatewayNodes[0]
-    #             canoe.set_system_variable_value("PACCAR_HASI::CAN_ID_TX", arbitrationID)  
-    #             # canoe.set_system_variable_value("PACCAR_HASI::CAN_ID_TX", 0x18DAF903)
-    #             # canoe.set_system_variable_value("PACCAR_HASI::Trigger", 1)
-    
-    #     # #CAN ID 2
-    #     # canoe.set_system_variable_value("PACCAR_HASI::CAN_ID_TX", 0x18DAF903)
-    #     # canoe.set_system_variable_value("PACCAR_HASI::Trigger", 1)
-        
-    # canoe.stop_measurement()
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "-v":
