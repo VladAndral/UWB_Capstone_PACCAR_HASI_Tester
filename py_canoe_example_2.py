@@ -60,28 +60,39 @@ def run__injection_gateway_test(isVirtualInterface:bool):
             print("\nThis gateway pair: {} to {}".format(eachChannel[0], eachChannel[1]))
             input("Press enter when switched. Test outputs will be affected if the switch is not made.")
             
-            # For each bus
-            for busName in HASI_bus_list:
-                # Do not send from the bus that is specified as receiver
-                if busName == eachChannel[1]: continue
+            sender = vector.VectorBus(serial=535823, channel=0)
+            receiver = vector.VectorBus(serial=535823, channel=1)
+            # If the receiver did not receive or do anything
+            sender.send(msg)
+            print(msg)
+            if receiver.recv(1) is None:
+                print("FAIL1: Specified gateway {} to {} with arbitrationID {} failed.".format(eachChannel[0], eachChannel[1], arbitrationID))
+            else: print("pass")
+            sender.shutdown()
+            receiver.shutdown()
+            
+            # # For each bus
+            # for busName in HASI_bus_list:
+            #     # Do not send from the bus that is specified as receiver
+            #     if busName == eachChannel[1]: continue
                 
-                # Send message. Might have to change when this happens relative to bus.recv()
-                # busObject.send(msg)
+            #     # Send message. Might have to change when this happens relative to bus.recv()
+            #     # busObject.send(msg)
                 
-                # If the bus that sent is the specified sender
-                if busName == eachChannel[0]:
-                    print("Sender inside if: {}".format(busName))
-                    sender = vector.VectorBus(serial=535823, channel=0)
-                    receiver = vector.VectorBus(serial=535823, channel=1)
-                    # If the receiver did not receive or do anything
-                    sender.send(msg)
-                    print(msg)
-                    if receiver.recv(1) is None:
-                        print("FAIL1: Specified gateway {} to {} with arbitrationID {} failed.".format(eachChannel[0], eachChannel[1], arbitrationID))
-                    else: print("pass")
-                    sender.shutdown()
-                    receiver.shutdown()
-                    break
+            #     # If the bus that sent is the specified sender
+            #     if busName == eachChannel[0]:
+            #         print("Sender inside if: {}".format(busName))
+            #         sender = vector.VectorBus(serial=535823, channel=0)
+            #         receiver = vector.VectorBus(serial=535823, channel=1)
+            #         # If the receiver did not receive or do anything
+            #         sender.send(msg)
+            #         print(msg)
+            #         if receiver.recv(1) is None:
+            #             print("FAIL1: Specified gateway {} to {} with arbitrationID {} failed.".format(eachChannel[0], eachChannel[1], arbitrationID))
+            #         else: print("pass")
+            #         sender.shutdown()
+            #         receiver.shutdown()
+            #         break
                 # # If the bus that sent is not the specified sender
                 # elif busName != eachChannel[0]:
                 #     # If the receiver did anything (it's not supposed to)
