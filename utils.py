@@ -16,7 +16,7 @@ def format_arbitrationID(arbitrationID:str, outputType:str):
     # The leftmost three bits of the hex should be '100', but the 
     # rightmost bit belongs to priority. To preserve it, we will check
     # if it is 1 by seeing if it is an odd number
-    hexID =  "0x9" + hexID[3:] if (int(hexID[2], 16) % 2) else "0x8" + hexID[3:]
+    hexID =  "0x1" + hexID[3:]
     
     if outputType == "byte": hexID = bytes.fromhex(hexID)
     elif outputType == "int": hexID = int(hexID, 16)
