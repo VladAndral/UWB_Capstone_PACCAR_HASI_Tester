@@ -1,7 +1,6 @@
-import utils, sys, can
+import utils, sys, can, re
 from can.interfaces import vector
 
-BITRATE_CONST = 500000
 
 def run__injection_gateway_test():
     """Test script that loops through all gateway networks, injecting CAN messages
@@ -12,14 +11,17 @@ def run__injection_gateway_test():
         even if hardware like Vector or Kvaser are connected
     """
     
-    ######### Will it work without this?
-    # configs = can.detect_available_configs(interfaces=['vector'])
-    # cfg = configs[0]
-    # print(cfg)
-    # vector.VectorBus.set_application_config(app_name="CANoe", app_channel=0, **cfg)
-    
-    
-    # vector.VectorBus.popup_vector_hw_configuration(wait_for_finish=0)
+    # Get the config info from one of the channels on the Vector hardware
+    config_ch1 = str(can.detect_available_configs(interfaces=['vector'])[0])
+    # Find the exact string 'bitrate=#####', focusing on the number (creating a group)
+    channelBitrate = re.search(r"bitrate=(\d+)", config_ch1 )
+    # Only get the string captured in the group (the number; the bitrate)
+    if channelBitrate: channelBitrate = channelBitrate.group(1)
+    if isinstance(channelBitrate, str):
+        BITRATE_CONST = int(channelBitrate)
+    else:
+        # If what was returned from channelBitrate.group(1) was not a string, don't use it
+        raise TypeError("Error returning string from regex searching for bitrate")
     
     # load the dbc filepath entered in filepath.txt
     primaryDBC_filepath = utils.loadFilePath("primaryDBC")
@@ -43,7 +45,6 @@ def run__injection_gateway_test():
                 print("\nThis gateway pair: {} to {}. Order matters. (arbID {})".format(eachChannel[0], eachChannel[1], arbitrationID_raw))
                 input("Press enter when switched. Test outputs will be affected if the switch is not made.")
             
-                # Worked only when bitrate == 500kHz (up from 250000)
                 sender = vector.VectorBus(serial=535823, channel=0, bitrate=BITRATE_CONST)
                 receiver = vector.VectorBus(serial=535823, channel=1, bitrate=BITRATE_CONST)
                 
