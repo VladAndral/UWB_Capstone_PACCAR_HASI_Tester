@@ -1,2 +1,1 @@
-py_canoe==3.0.4
-pywin32==311
+python-can==4.6.1
