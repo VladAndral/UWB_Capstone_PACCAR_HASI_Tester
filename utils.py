@@ -7,7 +7,7 @@ def loadFilePath(fileToLoad:str):
         fileToLoad (str): Args are either `primaryDBC`, `secondaryDBC`, or `cfg`
 
     Returns:
-        str: Returns the filepath based on the spec. If none of the three specific args are entered, returns non-filepath string
+        str|None: Returns the filepath based on the spec. If none of the three specific args are entered, returns None
     """
     try:
         dbcFile = open("filepath.txt", 'r')
@@ -19,17 +19,17 @@ def loadFilePath(fileToLoad:str):
         
     with dbcFile:
         dbcFile.readline()
-        primaryDBC = dbcFile.readline().strip()
+        primaryDBC = dbcFile.readline().strip().strip("\"")
         dbcFile.readline()
-        secondaryDBC = dbcFile.readline().strip()
+        secondaryDBC = dbcFile.readline().strip().strip("\"")
         dbcFile.readline()
-        cfg = dbcFile.readline().strip()
+        cfg = dbcFile.readline().strip().strip("\"")
         
         if fileToLoad == "primaryDBC": return primaryDBC
         if fileToLoad == "secondaryDBC": return secondaryDBC
-        if fileToLoad == "cfg": return cfg
+        if fileToLoad == "config": return cfg
         
-        return "no file to load specified"
+        return None
 
 def format_arbitrationID(arbitrationID:str, outputType:str):
     """Converts an arbitration id in provided int form to hex
