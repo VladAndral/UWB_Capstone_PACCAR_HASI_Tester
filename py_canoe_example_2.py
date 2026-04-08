@@ -42,7 +42,7 @@ def run__injection_gateway_test(isVirtualInterface:bool):
 
     # Dictionary of all gateways. Key=arbitrationID, value=list of channels gatewayed
     # gatewaySpecDict = utils.scrape_dbc_for_gateways("NOPUSH_DBC_Files/HASI_Primary_ALL_CAN.dbc")
-    gatewaySpecDict = utils.scrape_dbc_for_gateways(utils.loadFilePath("primaryDBC"))
+    gatewaySpecDict = utils.scrape_dbc_for_gateways(str(utils.loadFilePath("primaryDBC")))
 
     # configs = can.detect_available_configs(interfaces=['vector'])
     # cfg = configs[0]
