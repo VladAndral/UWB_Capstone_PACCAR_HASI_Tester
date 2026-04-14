@@ -16,7 +16,7 @@ def run__injection_gateway_test():
             
         int_arbitrationID = int(utils.format_arbitrationID(arbitrationID_raw, "int"))
         
-        # 2. Build a STANDARD Classic CAN Message (8 bytes max, NO FD flags)
+        # Dummy data from
         dummy_data = [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xFF]
         msg = can.Message(is_rx=False, 
                           is_extended_id=True, 
@@ -28,12 +28,12 @@ def run__injection_gateway_test():
             senderName = eachChannel[0]
             receiverName = eachChannel[1]
             
-            # 3. Target the Classic -> FD path
-            if senderName == 'VCAN2' and receiverName == 'ADSCAN1':
+            # Hardcoded to only test arbitrationID 2565799706 between VCAN2:ADSCAN1
+            if senderName == 'VCAN1' and receiverName == 'ADSCAN1':
                 
-                input("Press enter to inject the Classic Message...")
+                input("Press enter to inject ")
             
-                # 4. Sender is standard CAN
+                # Sender is standard CAN
                 sender = vector.VectorBus(serial=535823, channel=0, bitrate=500000)
                 
                 # Receiver is CAN-FD, dual bitrate
@@ -44,12 +44,12 @@ def run__injection_gateway_test():
                     sender.send(msg)
                     print(f"Standard CAN message sent from {senderName}...")
                     
-                    receivedMessage = receiver.recv(0.5)
+                    receivedMessage = receiver.recv(0.5) # Wait up to 0.5 seconds for a message to be received(was 0.25 seconds before)
                     if receivedMessage:
-                        print("PASS! The HASI wrapped the message into a container. Receiver saw:")
+                        print("PASS! Receiver saw:")
                         print(receivedMessage)
                     else:
-                        print(f"FAIL: No message received on {receiverName}")
+                        print(f"FAIL1: Specified gateway {senderName} to {receiverName} with arbitrationID_raw {hex(int(arbitrationID_raw))} failed.")
                 
                 finally:
                     sender.shutdown()
