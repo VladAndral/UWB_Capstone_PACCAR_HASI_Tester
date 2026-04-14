@@ -11,7 +11,7 @@ def run__injection_gateway_test():
         
         # Testing arbitrationID 2565799706 (0x18EEFF1A) 
         raw_id_as_int = int(arbitrationID_raw)
-        if raw_id_as_int != 2565799706:
+        if raw_id_as_int == 2565799706:
             continue
             
         int_arbitrationID = int(utils.format_arbitrationID(arbitrationID_raw, "int"))
@@ -29,7 +29,7 @@ def run__injection_gateway_test():
             receiverName = eachChannel[1]
             
             # 3. Target the Classic -> FD path
-            if senderName == 'VCAN2' and receiverName == 'ADSCAN1':
+            if senderName == 'VCAN1' and receiverName == 'ADSCAN1':
                 
                 input("Press enter to inject the Classic Message...")
             

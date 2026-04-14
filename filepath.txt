@@ -1,6 +1,6 @@
 PRIMARYGATEWAYDBC
-#
+"D:\seanb\Documents\UWB_Capstone_PACCAR_HASI_Tester\HASI_Primary_ALL_CAN.dbc"
 SECONDARYGATEWAYDBC
-##
+"D:\seanb\Documents\UWB_Capstone_PACCAR_HASI_Tester\HASI_Secondary_ALL_CAN.dbc"
 CONFIG
-###
+C:\Users\seanb\Capstone\J1939_CAN_FD_2ch\J1939_CAN_FD_2ch.cfg
