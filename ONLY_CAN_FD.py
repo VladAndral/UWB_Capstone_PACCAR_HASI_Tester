@@ -9,11 +9,6 @@ def run__injection_gateway_test():
 
     for arbitrationID_raw, channelList in gatewaySpecDict.items():
         
-        # Testing arbitrationID 2565799706 (0x18EEFF1A) 
-        raw_id_as_int = int(arbitrationID_raw)
-        if raw_id_as_int == 2565799706:
-            continue
-            
         int_arbitrationID = int(utils.format_arbitrationID(arbitrationID_raw, "int"))
         
         # 2. Build a STANDARD Classic CAN Message (8 bytes max, NO FD flags)
@@ -43,9 +38,12 @@ def run__injection_gateway_test():
                 try:
                     sender.send(msg)
                     print(f"Standard CAN message sent from {senderName}...")
-                    
+                    print(arbitrationID_raw)
+                    print(hex(int_arbitrationID))
+                
                     receivedMessage = receiver.recv(0.5)
                     if receivedMessage:
+
                         print("PASS! The HASI wrapped the message into a container. Receiver saw:")
                         print(receivedMessage)
                     else:
