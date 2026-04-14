@@ -1,5 +1,5 @@
 PRIMARYGATEWAYDBC
-#
+"C:\Users\garci\Downloads\HASI_Primary_ALL_CAN (4).dbc"
 SECONDARYGATEWAYDBC
 ##
 CONFIG
