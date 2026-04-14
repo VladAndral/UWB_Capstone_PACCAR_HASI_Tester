@@ -1,11 +1,12 @@
 from py_canoe import CANoe
 import utils, sys, can
 
+
 def cantest1():    
     canoe = CANoe()
     
-    ## MUST EDIT FILEPATH.TXT FOR THIS TO WORK
-    cfg_path = utils.loadFilePath("cfg")
+    # SEAN FILE PATH
+    cfg_path = r"C:\Users\seanb\Capstone\J1939_CAN_FD_2ch\J1939_CAN_FD_2ch.cfg"
     canoe.open(cfg_path)
     
     canoe.start_measurement()

@@ -9,15 +9,18 @@ def run__injection_gateway_test():
 
     for arbitrationID_raw, channelList in gatewaySpecDict.items():
         
-        # Testing arbitrationID 2565799706 (0x18EEFF1A) 
-        raw_id_as_int = int(arbitrationID_raw)
-        if raw_id_as_int != 2565799706:
-            continue
             
         int_arbitrationID = int(utils.format_arbitrationID(arbitrationID_raw, "int"))
         
-        # Dummy data from
+        hex_arbitrationID = hex(int_arbitrationID)
+        
+        # Header construction byte_2
+        pdu_format = (int_arbitrationID >> 16) & 0xFF
+        
+       
+        # Standard payload 
         dummy_data = [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xFF]
+
         msg = can.Message(is_rx=False, 
                           is_extended_id=True, 
                           arbitration_id=int_arbitrationID, 
@@ -28,7 +31,7 @@ def run__injection_gateway_test():
             senderName = eachChannel[0]
             receiverName = eachChannel[1]
             
-            # Hardcoded to only test arbitrationID 2565799706 between VCAN2:ADSCAN1
+            # Hardcoded to only test VCAN1:ADSCAN1 gateways
             if senderName == 'VCAN1' and receiverName == 'ADSCAN1':
                 
                 input("Press enter to inject ")
@@ -43,10 +46,11 @@ def run__injection_gateway_test():
                 try:
                     sender.send(msg)
                     print(f"Standard CAN message sent from {senderName}...")
+                    print(f"Hex Arbitration ID: {hex_arbitrationID}, Raw Int Arbitration ID: {arbitrationID_raw}")
                     
                     receivedMessage = receiver.recv(0.5) # Wait up to 0.5 seconds for a message to be received(was 0.25 seconds before)
                     if receivedMessage:
-                        print("PASS! Receiver saw:")
+                        print(f"PASS! Receiver {receiverName} saw:")
                         print(receivedMessage)
                     else:
                         print(f"FAIL1: Specified gateway {senderName} to {receiverName} with arbitrationID_raw {hex(int(arbitrationID_raw))} failed.")
