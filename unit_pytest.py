@@ -153,4 +153,23 @@ def test_classic_to_fd_routing(senderName, receiverName, arbitrationID_raw, send
     # Assert acts as our pass/fail condition for pytest
     assert receivedMessage is not None, f"FAIL1: Gateway {senderName} to {receiverName} dropped ID 0x{int_arbitrationID:08X}"
     
-    # summary at end(implement please)
+# summary at end(implement please)
+def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    stats = terminalreporter.stats
+
+    if 'failed' in stats:
+        numFails = len(stats['failed'])
+        print(f"\n" + "="*60)
+        print(f" GATEWAY TEST SUMMARY ({numFails} FAILED) ")
+        print(f"="*60)
+
+        print(f"Sender-Receiver-ArbitrationID")
+        for test in stats['failed']:
+            # Check if failure is parameterized test
+            if '[' in test.nodeid:
+                tx_rx_arb = test.nodeid.split('[')[-1].rstrip(']')
+                print(f"{tx_rx_arb}")
+            else:
+                print(f"{test.nodeid}")
+        
+        print(f"="*60)
