@@ -186,6 +186,34 @@ def convertFD_toCAN(initial_msg:int):
     classic_msg = int(classic_msg, 2)
     return classic_msg
 
+def generate_j1939_22_envelope(int_arbitrationID:int, dummy_data:list):
+    """Dynamically packs an 8-byte J1939 payload into a 12-byte J1939-22 CAN-FD envelope (PGN 9472 / 0x25000).
+    Uses bitwise operations for high-performance execution.
+
+    Args:
+        int_arbitrationID (int): The original Standard CAN arbitration ID
+        dummy_data (list): The 8-byte payload data array
+
+    Returns:
+        tuple: (envelope_id as int, envelope_payload as list)
+    """
+    pdu_format = (int_arbitrationID >> 16) & 0xFF
+    pdu_specific = (int_arbitrationID >> 8) & 0xFF
+
+    if pdu_format < 240:
+        byte_2 = 0x00
+        container_ps = pdu_specific
+    else:
+        byte_2 = pdu_specific
+        container_ps = 0xFF
+    
+    header = [0x40, pdu_format, byte_2, 0x08]
+    priority_edp_dp_sa = int_arbitrationID & 0x1F0000FF
+    
+    envelope_id = priority_edp_dp_sa | (0x25 << 16) | (container_ps << 8)
+    envelope_payload = header + dummy_data
+    
+    return envelope_id, envelope_payload
 
 
 if __name__ == "__main__":

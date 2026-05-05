@@ -1,5 +1,5 @@
 PRIMARYGATEWAYDBC
-"C:\Users\garci\Downloads\HASI_Primary_ALL_CAN (4).dbc"
+"C:\Users\garci\OneDrive - UW\Desktop\New folder\HASI_Primary_ALL_CAN (3).dbc"
 SECONDARYGATEWAYDBC
 ##
 CONFIG

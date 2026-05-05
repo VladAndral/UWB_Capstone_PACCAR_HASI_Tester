@@ -40,20 +40,17 @@ def run__injection_gateway_test():
     
     # Channel initialization
     try:
-        # Either set serial from Vector Hardware Manager or set app_name to "Canoe"
         # Sender is standard CAN
         # Set to CH1 for sender(locked by vector hardware for some reason)
-        sender = vector.VectorBus(serial=535823, 
-                                  channel=SENDER_CHANNEL, 
+        sender = vector.VectorBus(channel=SENDER_CHANNEL, 
                                   bitrate=500000)
                     
-        # Either set serial from Vector Hardware Manager or set app_name to "Canoe"
+        # Receiver is CAN-FD
         # Set to CH0 for receiver(locked by vector hardware for some reason)
         # Arbitration bitrate is 500 kbps, but data bitrate is 2 Mbps
         # Enabled CAN-FD
         # Set timing=timing if needed
-        receiver = vector.VectorBus(serial=535823, 
-                                    channel=RECEIVER_CHANNEL, 
+        receiver = vector.VectorBus(channel=RECEIVER_CHANNEL, 
                                     fd=True,
                                     timing=timing)
     
@@ -114,7 +111,9 @@ def run__injection_gateway_test():
             print(f" Please physically plug SENDER (CH {SENDER_CHANNEL}) into {senderName}")
             print(f" Please physically plug RECEIVER (CH {RECEIVER_CHANNEL}) into {receiverName}")
             print("="*60)
-            input("Press Enter when cables are physically secure...")
+            
+            # Pause ONCE before the route testing begins, not for every ID
+            input("Press Enter when cables are physically secure to blast all IDs... ")
             
             # The inner loop blasts through all the IDs for this specific connection
             for arbitrationID_raw in id_list:
@@ -130,8 +129,7 @@ def run__injection_gateway_test():
                                   arbitration_id=int_arbitrationID, 
                                   data=dummy_data)
                 
-                # Prompt user for arbitration id injection
-                input(f"Press enter to inject original ID 0x{int_arbitrationID:08X} ")
+                # Lockup
                 sender.send(msg)
                 
                 # print the payload similar to receivedMessage 
@@ -139,13 +137,47 @@ def run__injection_gateway_test():
                 print(f"Sender {senderName} sent:        ID: 0x{msg.arbitration_id:08X}            {formatted_payload}        Channel: {SENDER_CHANNEL}")
         
                 # Wait up to 1 seconds for a message
-                receivedMessage = receiver.recv(1)  
+                receivedMessage = receiver.recv(1.0)  
         
                 if receivedMessage:
-                    print(f"PASS! Receiver {receiverName} saw: {receivedMessage}")
+                    
+                    # Need to predict the J1939-22 envelope since the ECU wraps standard 8-byte messages before putting them on the CAN-FD bus
+                    pdu_format = (int_arbitrationID >> 16) & 0xFF
+                    pdu_specific = (int_arbitrationID >> 8) & 0xFF
+
+                    if pdu_format < 240:
+                        byte_2 = 0x00
+                        container_ps = pdu_specific
+                    else:
+                        byte_2 = pdu_specific
+                        container_ps = 0xFF
+                    
+                    expected_header = [0x40, pdu_format, byte_2, 0x08]
+                    priority_edp_dp_sa = int_arbitrationID & 0x1F0000FF
+                    
+                    # Envelope ID with J1939-22 PGN (9472 / 0x25000)
+                    expected_envelope_id = priority_edp_dp_sa | (0x25 << 16) | (container_ps << 8)
+                    expected_payload = expected_header + dummy_data
+
+                    # is_data_wrapped checks if the dummy_data got successfully placed inside the 12-byte payload
+                    # receivedMessage.data should be a list since expected_payload is a list
+                    is_data_wrapped = list(receivedMessage.data) == expected_payload
+                    
+                    # is_fd=True means it successfully upgraded to CAN-FD
+                    is_upgraded_to_fd = receivedMessage.is_fd
+                    is_correct_id = receivedMessage.arbitration_id == expected_envelope_id
+
+                    # Check if CAN FD message was perfectly wrapped by HASI ECU
+                    if is_data_wrapped and is_upgraded_to_fd and is_correct_id:
+                        print(f"PASS! Receiver {receiverName} unpacked FD Container: 0x{receivedMessage.arbitration_id:08X}")
+                    else:
+                        # FAIL2 if Frame was put on the bus but HASI didn't wrap it in the J1939-22 container correctly
+                        print(f"FAIL2: Frame routed, but the gateway failed to wrap the J1939-22 container.")
+                        print(f"   Expected ID: 0x{expected_envelope_id:08X} | Got: 0x{receivedMessage.arbitration_id:08X}")
+                        print(f"   Expected FD: True | Got FD: {receivedMessage.is_fd}")
                 else:
                     # FAIL1 if standard CAN message not put on bus at all
-                    print(f"FAIL1: Gateway {senderName} to {receiverName} with arbitrationID_raw {arbitrationID_raw} failed.")
+                    print(f"FAIL1: Gateway {senderName} to {receiverName} with arbitrationID_raw {arbitrationID_raw} dropped the frame.")
     
     except Exception as general_error:
         print("\n[Script Error]")
