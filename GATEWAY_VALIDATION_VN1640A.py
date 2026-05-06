@@ -128,13 +128,18 @@ def run_paccar_hil_test():
                     while receiver.recv(0.0) is not None:
                         pass
                     
+                    start_time = time.time()
+                    
                     sender.send(msg)
                     
                     # Find current time then add 1.0 seconds to it
-                    timeout_end = time.time() + 1.0
+                    timeout_end = start_time + 1.0
                     
                     # stage flag for checking CAN frame
                     found_routed_frame = False
+                    
+                    # want to check how long it takes for a pass to test
+                    elapsed_time_ms = 0.0
                     
                     # watchdog timer for checking receiving bus for however long the difference is between time() and timeout_end
                     while time.time() < timeout_end:
@@ -143,6 +148,7 @@ def run_paccar_hil_test():
                         if receivedMessage:
                             # With randomized data, we can now check which ECU CAN port actually received the payload
                             if list(receivedMessage.data) == expected_data:
+                                elapsed_time_ms = (time.time() - start_time) * 1000
                                 found_routed_frame = True
                                 break 
                     
@@ -153,14 +159,16 @@ def run_paccar_hil_test():
 
                         # Check against dynamic expected_id
                         if receivedMessage.arbitration_id == expected_id and receivedMessage.is_fd == expected_is_fd:
-                            print(f"    [PASS] Routing Successful & ID is identical!\n")
+                            # --- NEW: Compact, fully traceable PASS log ---
+                            print(f"    [PASS] Routing Successful! ({elapsed_time_ms:.1f} ms) | Expected: 0x{expected_id:08X} == Received: 0x{receivedMessage.arbitration_id:08X}\n")
                             test_passed = True
                             break 
                         else:
-                            print(f"    [PASS / MUTATED] Frame routed perfectly, but gateway translated the ID/Protocol!")
+                            # --- NEW: Print the latency in the MUTATED output ---
+                            print(f"    [PASS / MUTATED] Frame routed perfectly, but gateway translated the ID/Protocol! ({elapsed_time_ms:.1f} ms)")
                             print(f"           Expected ID : 0x{expected_id:08X}")
                             print(f"           Received ID : 0x{receivedMessage.arbitration_id:08X}\n")
-                            test_passed = True # Mark as PASS because the gateway successfully translated it
+                            test_passed = True 
                             break
                             
                     else:
