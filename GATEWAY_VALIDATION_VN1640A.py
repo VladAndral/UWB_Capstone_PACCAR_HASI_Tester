@@ -106,6 +106,10 @@ def run_paccar_hil_test():
                     send_id, send_payload = utils.generate_j1939_22_envelope(int_arbitrationID, dummy_data)
                     msg = can.Message(is_rx=False, is_extended_id=True, is_fd=True, bitrate_switch=True, dlc=9, 
                                       arbitration_id=send_id, data=send_payload)
+                else:
+                    # I accidentally deleted this...
+                    msg = can.Message(is_rx=False, is_extended_id=True, 
+                                      arbitration_id=int_arbitrationID, data=dummy_data)
 
                 # FORMAT RECEIVER (What comes OFF the bus)
                 if is_receiver_fd:
@@ -124,7 +128,9 @@ def run_paccar_hil_test():
                     formatted_send_payload = " ".join(f"{x:02x}" for x in msg.data)
                     print(f" -> Sending to {senderName}  : 0x{msg.arbitration_id:08X} | {formatted_send_payload} (Attempt {attempt + 1})")
                     
-                    # flush receiver
+                    # flush receiver at the start of each gateway test attempt by
+                    # checking the receiver for CAN messages, until there's nothing being received
+                    # THEN we start inject the new CAN message
                     while receiver.recv(0.0) is not None:
                         pass
                     
@@ -159,12 +165,12 @@ def run_paccar_hil_test():
 
                         # Check against dynamic expected_id
                         if receivedMessage.arbitration_id == expected_id and receivedMessage.is_fd == expected_is_fd:
-                            # --- NEW: Compact, fully traceable PASS log ---
+                            
                             print(f"    [PASS] Routing Successful! ({elapsed_time_ms:.1f} ms) | Expected: 0x{expected_id:08X} == Received: 0x{receivedMessage.arbitration_id:08X}\n")
                             test_passed = True
                             break 
                         else:
-                            # --- NEW: Print the latency in the MUTATED output ---
+                           
                             print(f"    [PASS / MUTATED] Frame routed perfectly, but gateway translated the ID/Protocol! ({elapsed_time_ms:.1f} ms)")
                             print(f"           Expected ID : 0x{expected_id:08X}")
                             print(f"           Received ID : 0x{receivedMessage.arbitration_id:08X}\n")
