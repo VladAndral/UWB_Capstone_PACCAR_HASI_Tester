@@ -1,0 +1,140 @@
+import utils, sys, can, re
+from can.interfaces import vector
+
+def run__injection_gateway_test():
+    """Test script that loops through all gateway networks, injecting CAN messages
+        into each bus, and listening on one bus to see if the message was sent
+
+    Args:
+        isVirtualInterface (bool): Option to force a virtual interface,
+        even if hardware like Vector or Kvaser are connected
+    """
+    allChannelConfigs = (can.detect_available_configs(interfaces=['vector']))
+    VCAN1_SERIAL = (allChannelConfigs[0]["serial"])
+    VCAN1_CHANNEL = 0
+    VCAN1_BITRATE = (allChannelConfigs[0]["vector_channel_config"].bus_params.can.bitrate)
+
+    VCAN10_SERIAL = (allChannelConfigs[1]["serial"])
+    VCAN10_CHANNEL = 1
+    VCAN10_BITRATE = (allChannelConfigs[1]["vector_channel_config"].bus_params.can.bitrate)
+    
+    PCAN1_SERIAL = (allChannelConfigs[2]["serial"])
+    PCAN1_CHANNEL = 2
+    PCAN1_BITRATE = (allChannelConfigs[2]["vector_channel_config"].bus_params.can.bitrate)
+    
+    PCAN2_SERIAL = (allChannelConfigs[3]["serial"])
+    PCAN2_CHANNEL = 3
+    PCAN2_BITRATE = (allChannelConfigs[3]["vector_channel_config"].bus_params.can.bitrate)
+
+    VCAN2_SERIAL = (allChannelConfigs[4]["serial"])
+    VCAN2_CHANNEL = 4
+    VCAN2_BITRATE = (allChannelConfigs[4]["vector_channel_config"].bus_params.can.bitrate)
+
+    VCAN20_SERIAL = (allChannelConfigs[5]["serial"])
+    VCAN20_CHANNEL = 5
+    VCAN20_BITRATE = (allChannelConfigs[5]["vector_channel_config"].bus_params.can.bitrate)
+    
+    """
+    # Get the config info from one of the channels on the Vector hardware
+    config_ch1 = str(can.detect_available_configs(interfaces=['vector'])[0])
+        
+    # Only get the string captured in the group (the number; the bitrate)
+    if channelBitrate: channelBitrate = channelBitrate.group(1)
+    if isinstance(channelBitrate, str):
+        BITRATE_CONST = int(channelBitrate)
+    else:
+        # If what was returned from channelBitrate.group(1) was not a string, don't use it
+        raise TypeError("Error returning string from regex searching for bitrate")
+    """
+    # load the dbc filepath entered in filepath.txt
+    primaryDBC_filepath = utils.loadFilePath("primaryDBC")
+    if not isinstance(primaryDBC_filepath, str): raise TypeError("filepath was returned as 'None'")
+    
+    # Dictionary of all gateways. Key=arbitrationID, value=list of channels gatewayed
+    gatewaySpecDict = utils.scrape_dbc_for_gateways(primaryDBC_filepath)
+
+    for arbitrationID_raw, channelList in gatewaySpecDict.items():
+        # Formatting arbitrationID and converting to int format for python-can to use
+        int_arbitrationID = int(utils.format_arbitrationID(arbitrationID_raw, "int"))
+        
+        msg = can.Message(is_rx = False, is_extended_id=True, arbitration_id=int_arbitrationID)
+        # msg = can.Message(is_rx = False, is_extended_id=True, arbitration_id=int_arbitrationID, data=[0x00]*8)
+        
+        # There may be multiple gateways for one arbitrationID
+        for gatewayChannelPair in channelList:
+            # Splitting this current channel, e.g. "CAN1:CAN2" --> ["CAN1", "CAN2"]
+            eachChannel = gatewayChannelPair.split(":")
+            senderName = eachChannel[0]
+            receiverName = eachChannel[1]
+            # This if branch is only for testing non CAN FD ports ADSCAN#, since they require special handling/formatting
+            # if senderName[0] == ('V' or 'P') and receiverName[0] == ('V' or 'P'):
+            
+            if senderName[0] == ("VCAN1"):
+                sender = vector.VectorBus(serial=VCAN1_SERIAL, channel=VCAN1_CHANNEL, bitrate=VCAN1_BITRATE)
+            elif senderName[0] == ("VCAN10"):
+                sender = vector.VectorBus(serial=VCAN10_SERIAL, channel=VCAN10_CHANNEL, bitrate=VCAN10_BITRATE)
+            elif senderName[0] == ("PCAN1"):
+                sender = vector.VectorBus(serial=PCAN1_SERIAL, channel=PCAN1_CHANNEL, bitrate=PCAN1_BITRATE)
+            elif senderName[0] == ("PCAN2"):
+                sender = vector.VectorBus(serial=PCAN2_SERIAL, channel=PCAN2_CHANNEL, bitrate=PCAN2_BITRATE)
+            elif senderName[0] == ("VCAN2"):
+                sender = vector.VectorBus(serial=VCAN2_SERIAL, channel=VCAN2_CHANNEL, bitrate=VCAN2_BITRATE)
+            else:
+                sender = vector.VectorBus(serial=VCAN20_SERIAL, channel=VCAN20_CHANNEL, bitrate=VCAN20_BITRATE)
+
+            if receiverName[0] == ("VCAN1"):
+                receiver = vector.VectorBus(serial=VCAN1_SERIAL, channel=VCAN1_CHANNEL, bitrate=VCAN1_BITRATE)
+            elif receiverName[0] == ("VCAN10"):
+                receiver = vector.VectorBus(serial=VCAN10_SERIAL, channel=VCAN10_CHANNEL, bitrate=VCAN10_BITRATE)
+            elif receiverName[0] == ("PCAN1"):
+                receiver = vector.VectorBus(serial=PCAN1_SERIAL, channel=PCAN1_CHANNEL, bitrate=PCAN1_BITRATE)
+            elif receiverName[0] == ("PCAN2"):
+                receiver = vector.VectorBus(serial=PCAN2_SERIAL, channel=PCAN2_CHANNEL, bitrate=PCAN2_BITRATE)
+            elif receiverName[0] == ("VCAN2"):
+                receiver = vector.VectorBus(serial=VCAN2_SERIAL, channel=VCAN2_CHANNEL, bitrate=VCAN2_BITRATE)
+            else:
+                receiver = vector.VectorBus(serial=VCAN20_SERIAL, channel=VCAN20_CHANNEL, bitrate=VCAN20_BITRATE)
+            
+            """
+            if senderName[0] == ("VCAN1"):
+                sender = vector.VectorBus(serial=VCAN1_SERIAL, channel=VCAN1_CHANNEL, bitrate=VCAN1_CHANNEL)
+            elif senderName[0] == ("VCAN2"):
+                sender = vector.VectorBus(serial=VCAN10_SERIAL, channel=VCAN10_CHANNEL, bitrate=VCAN10_CHANNEL)
+
+            if receiverName[0] == ("VCAN1"):
+                receiver = vector.VectorBus(serial=VCAN1_SERIAL, channel=VCAN1_CHANNEL, bitrate=VCAN1_CHANNEL)
+            elif receiverName[0] == ("VCAN2"):
+                receiver = vector.VectorBus(serial=VCAN10_SERIAL, channel=VCAN10_CHANNEL, bitrate=VCAN10_CHANNEL)
+            """
+
+            print("\nThis gateway pair: {} to {}. Order matters. (arbID {})".format(senderName, receiverName, arbitrationID_raw))
+            input("Press enter when switched. Test outputs will be affected if the switch is not made.")
+        
+            # sender = vector.VectorBus(serial=535823, channel=0, bitrate = BITRATE_CONST)
+            # receiver = vector.VectorBus(serial=535823, channel=1, bitrate = BITRATE_CONST)
+            
+            try:
+                sender.send(msg)
+            except can.exceptions.CanOperationError:
+                print(f"Error: {senderName} busObject encountered an error sending message with raw arbID {hex(int(arbitrationID_raw))} .")
+                print(msg)
+            else:  # If no exception was raised
+                # If the message was received, the recv() function will return the message received
+                try:
+                    receivedMessage = receiver.recv(0.25)
+                except can.exceptions.CanOperationError:
+                    print(f"Error: {receiverName} busObject encountered an error trying to receive or acknowledge any sent messages.")
+                else:  # If no exception was raised
+                    if receivedMessage is None:
+                        print(f"FAIL1: Specified gateway {senderName} to {receiverName} with arbitrationID_raw {hex(int(arbitrationID_raw))} failed.")
+                    else: 
+                        print(receivedMessage)
+                
+            
+            # Always shutdown the VectorBus'es
+            finally:
+                sender.shutdown()
+                receiver.shutdown()
+
+if __name__ == "__main__":
+    run__injection_gateway_test()
