@@ -120,27 +120,33 @@ def run_paccar_hil_test():
                 test_passed = False
                 
                 for attempt in range(MAX_RETRIES):
-                    # --- NEW: Print exactly what is going onto the wire ---
+                    # 1. Print exactly what is going onto the wire
                     formatted_send_payload = " ".join(f"{x:02x}" for x in msg.data)
-                    print(f" -> Sending to {senderName}: 0x{msg.arbitration_id:08X} | {formatted_send_payload} (Attempt {attempt + 1})")
+                    print(f" -> Sending to {senderName}  : 0x{msg.arbitration_id:08X} | {formatted_send_payload} (Attempt {attempt + 1})")
                     
                     sender.send(msg)
                     receivedMessage = receiver.recv(1.0)
 
                     if receivedMessage:
+                        # 2. NEW: Print exactly what came off the wire immediately
+                        formatted_recv_payload = " ".join(f"{x:02x}" for x in receivedMessage.data)
+                        print(f" <- Received on {receiverName}: 0x{receivedMessage.arbitration_id:08X} | {formatted_recv_payload}")
+
                         is_correct_id = receivedMessage.arbitration_id == expected_id
                         is_data_intact = list(receivedMessage.data) == expected_data
                         is_correct_protocol = receivedMessage.is_fd == expected_is_fd
 
                         if is_correct_id and is_data_intact and is_correct_protocol:
-                            formatted_payload = " ".join(f"{x:02x}" for x in receivedMessage.data)
-                            print(f"PASS! {receiverName} received: 0x{receivedMessage.arbitration_id:08X} | {formatted_payload} (Attempt {attempt + 1})")
+                            print(f"    [PASS] Routing Successful!\n")
                             test_passed = True
                             break 
                         else:
-                            print(f"Attempt {attempt + 1}: FAIL2 - Frame routed, but data/protocol mutated incorrectly.")
+                            # 3. If it mutated, print what we EXPECTED to see so you can compare
+                            expected_payload_str = " ".join(f"{x:02x}" for x in expected_data)
+                            print(f"    [FAIL] Frame routed, but mutated by gateway!")
+                            print(f"           Expected : 0x{expected_id:08X} | {expected_payload_str}\n")
                     else:
-                        print(f"Attempt {attempt + 1}: FAIL1 - Gateway dropped the frame (Timeout).")
+                        print(f"    [FAIL] Gateway dropped the frame (Timeout).\n")
                 
                 if not test_passed:
                     print(f"--> FINAL RESULT: Gateway {senderName} to {receiverName} FAILED ID {arbitrationID_raw}.")
