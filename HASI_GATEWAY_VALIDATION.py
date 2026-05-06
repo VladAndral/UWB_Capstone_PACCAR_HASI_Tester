@@ -1,52 +1,50 @@
-import utils, can, sys, traceback
+import utils
+import can
+import sys
+import traceback
 from can.interfaces import vector
 
-# Will use this to wrap code intended for use in UWB test environment(2 CH vector device) vs PACCAR lab environment(8 CH vector device)
+# ==============================================================================
+# ENVIRONMENT & HARDWARE CONFIGURATION
+# ==============================================================================
+
+# Toggle this to True when you are physically in the PACCAR lab with all 8 channels connected.
+# Leave it False when testing at home with your 2-channel Y-splitter.
 PACCAR_HIL_ENVIRONMENT = False
 
 CAN_STD = ['VCAN1', 'VCAN10', 'PCAN1', 'PCAN2', 'VCAN2', 'VCAN20']
 CAN_FD = ['ADSCAN1', 'ADSCAN2']
 
-# 8-Channel Mapping for the PACCAR Lab
-PACCAR_CHANNEL_MAP = {
-    'VCAN1': 0,
-    'VCAN10': 1,
-    'PCAN1': 2,
-    'PCAN2': 3,
-    'VCAN2': 4,
-    'VCAN20': 5,
-    'ADSCAN1': 6,
-    'ADSCAN2': 7
-}
-
-# The Permanent Digital Twin of the PACCAR Lab
-NETWORK_CONFIGS = {
-    'VCAN1':   {'channel': 0, 'bitrate': 500000},
-    
-    'VCAN10':  {'channel': 1, 'bitrate': 500000},
-    
-    'PCAN1':   {'channel': 2, 'bitrate': 500000},
-    
-    'PCAN2':   {'channel': 3, 'bitrate': 500000},
-    
-    'VCAN2':   {'channel': 4, 'bitrate': 500000},
-    
-    'VCAN20':  {'channel': 5, 'bitrate': 500000}, 
-    
-    'ADSCAN1': {'channel': 6,
-                'fd': True,
-                'timing': can.BitTimingFd.from_bitrate_and_segments(f_clock=80_000_000, nom_bitrate=500_000, data_bitrate=2_000_000, nom_tseg1=63, nom_tseg2=16, nom_sjw=4, data_tseg1=15, data_tseg2=4, data_sjw=1)},
-    
-    'ADSCAN2': {'channel': 7,
-                'fd': True,
-                'timing': can.BitTimingFd.from_bitrate_and_segments(f_clock=80_000_000, nom_bitrate=500_000, data_bitrate=2_000_000, nom_tseg1=63, nom_tseg2=16, nom_sjw=4, data_tseg1=15, data_tseg2=4, data_sjw=1)}
-}
-
-# Hardcoded to match the physical layout of the 2-Channel Vector VN box
+# Fallback channels for the 2-Channel home bench
 SENDER_CHANNEL = 0
 RECEIVER_CHANNEL = 1
 
-def run__injection_gateway_test():
+# Shared J1939 CAN-FD timing profile to keep the dictionary clean
+j1939_fd_timing = can.BitTimingFd.from_bitrate_and_segments(
+    f_clock=80_000_000, nom_bitrate=500_000, data_bitrate=2_000_000, 
+    nom_tseg1=63, nom_tseg2=16, nom_sjw=4, 
+    data_tseg1=15, data_tseg2=4, data_sjw=1
+)
+
+VECTOR_APPLICATION_NAME = 'CANoe'
+
+# The Permanent Digital Twin of the PACCAR Lab
+NETWORK_CONFIGS = {
+    'VCAN1':   {'channel': 0, 'bitrate': 500000, 'app_name': VECTOR_APPLICATION_NAME}, 
+    'VCAN10':  {'channel': 1, 'bitrate': 500000, 'app_name': VECTOR_APPLICATION_NAME}, 
+    'PCAN1':   {'channel': 2, 'bitrate': 500000, 'app_name': VECTOR_APPLICATION_NAME}, 
+    'PCAN2':   {'channel': 3, 'bitrate': 500000, 'app_name': VECTOR_APPLICATION_NAME}, 
+    'VCAN2':   {'channel': 4, 'bitrate': 500000, 'app_name': VECTOR_APPLICATION_NAME}, 
+    'VCAN20':  {'channel': 5, 'bitrate': 500000, 'app_name': VECTOR_APPLICATION_NAME}, 
+    'ADSCAN1': {'channel': 6, 'fd': True, 'timing': j1939_fd_timing, 'app_name': VECTOR_APPLICATION_NAME}, 
+    'ADSCAN2': {'channel': 7, 'fd': True, 'timing': j1939_fd_timing, 'app_name': VECTOR_APPLICATION_NAME}
+}
+
+# ==============================================================================
+# MAIN EXECUTION ENGINE
+# ==============================================================================
+
+def run_injection_gateway_test():
     
     primaryDBC_filepath = utils.loadFilePath("primaryDBC")
     if not isinstance(primaryDBC_filepath, str): 
@@ -54,12 +52,6 @@ def run__injection_gateway_test():
 
     # Dictionary of all gateways. Key=arbitrationID, value=list of channels gatewayed
     gatewaySpecDict = utils.scrape_dbc_for_gateways(primaryDBC_filepath)
-    
-    # Bit timing configuration for CAN-FD
-    timing = can.BitTimingFd.from_bitrate_and_segments(
-        f_clock=80_000_000, nom_bitrate=500_000, nom_tseg1=63, nom_tseg2=16, nom_sjw=4,
-        data_bitrate=2_000_000, data_tseg1=15, data_tseg2=4, data_sjw=1
-    )
     
     dummy_data = [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xFF]
 
@@ -81,34 +73,42 @@ def run__injection_gateway_test():
             senderName = route_pair[0]
             receiverName = route_pair[1]
             
-            # Determine the hardware configuration for this specific route
             is_sender_fd = senderName in CAN_FD
             is_receiver_fd = receiverName in CAN_FD
-            
-            # --- THE DYNAMIC CABLE SWAP PROMPT ---
-            print(f"\n" + "="*70)
-            print(f" NEW ROUTE DETECTED: {senderName} -> {receiverName} ({len(id_list)} IDs grouped)")
-            print(f" Please physically plug SENDER (CH {SENDER_CHANNEL}) into {senderName}")
-            print(f" Please physically plug RECEIVER (CH {RECEIVER_CHANNEL}) into {receiverName}")
-            print("="*70)
-            
-            input("Press Enter when cables are physically secure to initialize hardware... ")
             
             # --- DYNAMIC HARDWARE INITIALIZATION ---
             sender = None
             receiver = None
             try:
-                # Initialize Sender
-                if is_sender_fd:
-                    sender = vector.VectorBus(channel=SENDER_CHANNEL, fd=True, timing=timing)
+                if PACCAR_HIL_ENVIRONMENT:
+                    # [FULLY AUTOMATED PACCAR SETUP]
+                    print(f"\n" + "="*70)
+                    print(f" TESTING ROUTE: {senderName} -> {receiverName} ({len(id_list)} IDs grouped)")
+                    print("="*70)
+                    
+                    tx_params = NETWORK_CONFIGS[senderName]
+                    rx_params = NETWORK_CONFIGS[receiverName]
+                    
                 else:
-                    sender = vector.VectorBus(channel=SENDER_CHANNEL, bitrate=500000)
-                
-                # Initialize Receiver
-                if is_receiver_fd:
-                    receiver = vector.VectorBus(channel=RECEIVER_CHANNEL, fd=True, timing=timing)
-                else:
-                    receiver = vector.VectorBus(channel=RECEIVER_CHANNEL, bitrate=500000)
+                    # [MANUAL FALLBACK SETUP]
+                    print(f"\n" + "="*70)
+                    print(f" [MANUAL OVERRIDE] 2-Channel Test Bench Detected")
+                    print(f" Please physically plug SENDER (CH {SENDER_CHANNEL}) into {senderName}")
+                    print(f" Please physically plug RECEIVER (CH {RECEIVER_CHANNEL}) into {receiverName}")
+                    print("="*70)
+                    input("Press Enter when cables are physically secure to blast IDs... ")
+                    
+                    # Copy the dictionary parameters so we don't accidentally overwrite the master config
+                    tx_params = NETWORK_CONFIGS[senderName].copy()
+                    rx_params = NETWORK_CONFIGS[receiverName].copy()
+                    
+                    # Override the physical channels to match the 2-channel box
+                    tx_params['channel'] = SENDER_CHANNEL
+                    rx_params['channel'] = RECEIVER_CHANNEL
+
+                # Unpack and Initialize
+                sender = vector.VectorBus(**tx_params)
+                receiver = vector.VectorBus(**rx_params)
                     
             except can.exceptions.CanInitializationError as hardware_error:
                 print(f"\n[Hardware Error] Failed to configure Vector channels for {senderName}->{receiverName}.")
@@ -166,30 +166,34 @@ def run__injection_gateway_test():
                     expected_is_fd = True
 
                 # ---------------------------------------------------------
-                # EXECUTION & UNIFIED VALIDATION
+                # EXECUTION & RETRY LOGIC
                 # ---------------------------------------------------------
+                MAX_RETRIES = 3
+                test_passed = False
                 
-                # Send the compiled message
-                sender.send(msg)
-                formatted_payload = " ".join(f"{x:02x}" for x in msg.data)
-                print(f"Sender {senderName} sent:        ID: 0x{msg.arbitration_id:08X}            {formatted_payload}")
+                for attempt in range(MAX_RETRIES):
+                    sender.send(msg)
+                    receivedMessage = receiver.recv(1.0)  
 
-                # Listen for the exact prediction
-                receivedMessage = receiver.recv(1.0)  
+                    if receivedMessage:
+                        is_correct_id = receivedMessage.arbitration_id == expected_id
+                        is_data_intact = list(receivedMessage.data) == expected_data
+                        is_correct_protocol = receivedMessage.is_fd == expected_is_fd
 
-                if receivedMessage:
-                    is_correct_id = receivedMessage.arbitration_id == expected_id
-                    is_data_intact = list(receivedMessage.data) == expected_data
-                    is_correct_protocol = receivedMessage.is_fd == expected_is_fd
-
-                    if is_correct_id and is_data_intact and is_correct_protocol:
-                        print(f"PASS! Receiver {receiverName} correctly parsed: 0x{receivedMessage.arbitration_id:08X}")
+                        if is_correct_id and is_data_intact and is_correct_protocol:
+                            # Format payload cleanly for printing
+                            formatted_payload = " ".join(f"{x:02x}" for x in receivedMessage.data)
+                            print(f"PASS! {receiverName} received: 0x{receivedMessage.arbitration_id:08X} | {formatted_payload} (Attempt {attempt + 1})")
+                            test_passed = True
+                            break 
+                        else:
+                            print(f"Attempt {attempt + 1}: FAIL2 - Frame routed, but data/protocol mutated incorrectly.")
                     else:
-                        print(f"FAIL2: Frame routed, but data/protocol was mutated incorrectly by the ECU.")
-                        print(f"   Expected ID: 0x{expected_id:08X} | Got: 0x{receivedMessage.arbitration_id:08X}")
-                        print(f"   Expected FD: {expected_is_fd} | Got FD: {receivedMessage.is_fd}")
-                else:
-                    print(f"FAIL1: Gateway {senderName} to {receiverName} with ID {arbitrationID_raw} dropped the frame.")
+                        print(f"Attempt {attempt + 1}: FAIL1 - Gateway dropped the frame (Timeout).")
+                
+                if not test_passed:
+                    print(f"--> FINAL RESULT: Gateway {senderName} to {receiverName} FAILED ID {arbitrationID_raw}.")
+                    print("-" * 50)
             
             # --- SHUTDOWN BEFORE NEXT TOPOLOGY ---
             print(f"\n[Hardware Release] Closing channels for {senderName} -> {receiverName}...")
@@ -204,4 +208,9 @@ def run__injection_gateway_test():
         if 'receiver' in locals() and receiver is not None: receiver.shutdown()
 
 if __name__ == "__main__":
-    run__injection_gateway_test()
+    # run_injection_gateway_test()
+    allChannelConfigs = (can.detect_available_configs(interfaces=['vector']))
+    # print(allChannelConfigs[0]["serial"])
+    sender = vector.VectorBus(**allChannelConfigs[1])
+    print(sender.channel_info)
+    sender.shutdown()
