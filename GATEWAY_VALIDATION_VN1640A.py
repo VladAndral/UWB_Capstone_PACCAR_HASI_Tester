@@ -117,7 +117,7 @@ def run_paccar_hil_test():
                     expected_is_fd = False
 
                 # --- 5. EXECUTION & RETRY LOGIC ---
-                MAX_RETRIES = 20
+                MAX_RETRIES = 5
                 test_passed = False
                 
                 for attempt in range(MAX_RETRIES):
