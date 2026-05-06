@@ -8,14 +8,21 @@ from can.interfaces import vector
 # ENVIRONMENT & HARDWARE CONFIGURATION
 # ==============================================================================
 
-# Toggle this to True when you are physically in the PACCAR lab with all 8 channels connected.
-# Leave it False when testing at home with your 2-channel Y-splitter.
-PACCAR_HIL_ENVIRONMENT = False
+# Set to True if All 8 CAN Ports are Connected to a Vector Hardware Device Simultaneously(Double VN1640A Setup)
+# Set to False if Using VN1610 + CANcable 2Y Setup
+PACCAR_HIL_ENVIRONMENT = True
 
-CAN_STD = ['VCAN1', 'VCAN10', 'PCAN1', 'PCAN2', 'VCAN2', 'VCAN20']
-CAN_FD = ['ADSCAN1', 'ADSCAN2']
+CAN_STD = ['VCAN1', 
+           'VCAN10', 
+           'PCAN1', 
+           'PCAN2', 
+           'VCAN2', 
+           'VCAN20']
 
-# Fallback channels for the 2-Channel home bench
+CAN_FD = ['ADSCAN1', 
+          'ADSCAN2']
+
+# Channels for VN1610A + CANcable 2Y Setup
 SENDER_CHANNEL = 0
 RECEIVER_CHANNEL = 1
 
@@ -26,25 +33,36 @@ j1939_fd_timing = can.BitTimingFd.from_bitrate_and_segments(
     data_tseg1=15, data_tseg2=4, data_sjw=1
 )
 
+# Change This to the Application Name specified in Application Channels Configuration in Vector Hardware Manager
 VECTOR_APPLICATION_NAME = 'CANoe'
 
-# The Permanent Digital Twin of the PACCAR Lab
+# J1939 CAN Extended Classic Profile
+STD_PROFILE = {'bitrate': 500000, 'app_name': VECTOR_APPLICATION_NAME}
+
+# J1939 CAN Extended FD(Fast Data) Profile
+FD_PROFILE  = {'fd': True, 'timing': j1939_fd_timing, 'app_name': VECTOR_APPLICATION_NAME}
+
+# 2. Unpack them into the specific physical channels
 NETWORK_CONFIGS = {
-    'VCAN1':   {'channel': 0, 'bitrate': 500000, 'app_name': VECTOR_APPLICATION_NAME}, 
-    'VCAN10':  {'channel': 1, 'bitrate': 500000, 'app_name': VECTOR_APPLICATION_NAME}, 
-    'PCAN1':   {'channel': 2, 'bitrate': 500000, 'app_name': VECTOR_APPLICATION_NAME}, 
-    'PCAN2':   {'channel': 3, 'bitrate': 500000, 'app_name': VECTOR_APPLICATION_NAME}, 
-    'VCAN2':   {'channel': 4, 'bitrate': 500000, 'app_name': VECTOR_APPLICATION_NAME}, 
-    'VCAN20':  {'channel': 5, 'bitrate': 500000, 'app_name': VECTOR_APPLICATION_NAME}, 
-    'ADSCAN1': {'channel': 6, 'fd': True, 'timing': j1939_fd_timing, 'app_name': VECTOR_APPLICATION_NAME}, 
-    'ADSCAN2': {'channel': 7, 'fd': True, 'timing': j1939_fd_timing, 'app_name': VECTOR_APPLICATION_NAME}
+    'VCAN1':   {'channel': 0, **STD_PROFILE}, 
+    'VCAN10':  {'channel': 1, **STD_PROFILE}, 
+    'PCAN1':   {'channel': 2, **STD_PROFILE}, 
+    'PCAN2':   {'channel': 3, **STD_PROFILE}, 
+    'VCAN2':   {'channel': 4, **STD_PROFILE}, 
+    'VCAN20':  {'channel': 5, **STD_PROFILE}, 
+    'ADSCAN1': {'channel': 6, **FD_PROFILE}, 
+    'ADSCAN2': {'channel': 7, **FD_PROFILE}
 }
 
+# Global array to hold all active physical connections
+ACTIVE_BUSES = {}
+
 # ==============================================================================
-# MAIN EXECUTION ENGINE
+# MAIN GATEWAY TEST SCRIPT
 # ==============================================================================
 
 def run_injection_gateway_test():
+    global ACTIVE_BUSES
     
     primaryDBC_filepath = utils.loadFilePath("primaryDBC")
     if not isinstance(primaryDBC_filepath, str): 
@@ -81,16 +99,30 @@ def run_injection_gateway_test():
             receiver = None
             try:
                 if PACCAR_HIL_ENVIRONMENT:
-                    # [FULLY AUTOMATED PACCAR SETUP]
+                    # [8-CHANNEL MULTICAST FIX]
+                    # If the dictionary is empty, initialize ALL 8 channels once and leave them open.
+                    if not ACTIVE_BUSES:
+                        print(f"\n" + "="*70)
+                        print(" INITIALIZING ALL 8 VECTOR CHANNELS FOR MULTICAST ACKs...")
+                        print("="*70)
+                        for bus_name, bus_params in NETWORK_CONFIGS.items():
+                            ACTIVE_BUSES[bus_name] = vector.VectorBus(**bus_params)
+
+                    # Grab the specific buses needed for this injection
+                    sender = ACTIVE_BUSES[senderName]
+                    receiver = ACTIVE_BUSES[receiverName]
+                    
                     print(f"\n" + "="*70)
                     print(f" TESTING ROUTE: {senderName} -> {receiverName} ({len(id_list)} IDs grouped)")
                     print("="*70)
                     
-                    tx_params = NETWORK_CONFIGS[senderName]
-                    rx_params = NETWORK_CONFIGS[receiverName]
-                    
                 else:
-                    # [MANUAL FALLBACK SETUP]
+                    # [2-CHANNEL MANUAL OVERRIDE SETUP]
+                    # Shut down the previous route's buses before swapping cables
+                    for bus in ACTIVE_BUSES.values():
+                        bus.shutdown()
+                    ACTIVE_BUSES.clear()
+                    
                     print(f"\n" + "="*70)
                     print(f" [MANUAL OVERRIDE] 2-Channel Test Bench Detected")
                     print(f" Please physically plug SENDER (CH {SENDER_CHANNEL}) into {senderName}")
@@ -106,64 +138,44 @@ def run_injection_gateway_test():
                     tx_params['channel'] = SENDER_CHANNEL
                     rx_params['channel'] = RECEIVER_CHANNEL
 
-                # Unpack and Initialize
-                sender = vector.VectorBus(**tx_params)
-                receiver = vector.VectorBus(**rx_params)
+                    # Unpack and Initialize
+                    sender = vector.VectorBus(**tx_params)
+                    receiver = vector.VectorBus(**rx_params)
+                    
+                    # Store them so they can be cleaned up on the next loop or at the end
+                    ACTIVE_BUSES[senderName] = sender
+                    ACTIVE_BUSES[receiverName] = receiver
                     
             except can.exceptions.CanInitializationError as hardware_error:
-                print(f"\n[Hardware Error] Failed to configure Vector channels for {senderName}->{receiverName}.")
+                print(f"\n[Hardware Error] Failed to configure Vector channels for {senderName} to {receiverName}.")
                 print(f"Error details: {hardware_error}")
-                if sender is not None: sender.shutdown()
-                if receiver is not None: receiver.shutdown()
                 sys.exit(1)
-
 
             # --- 3. THE INJECTION LOOP ---
             for arbitrationID_raw in id_list:
                 int_arbitrationID = int(utils.format_arbitrationID(arbitrationID_raw, "int"))
 
                 # ---------------------------------------------------------
-                # TOPOLOGY ROUTING LOGIC (Format Payload & Set Expectations)
+                # Routing Topologies
                 # ---------------------------------------------------------
                 
-                # BRANCH A: CAN-FD to Standard (Reverse Routing)
-                if is_sender_fd and not is_receiver_fd:
-                    envelope_id, envelope_payload = utils.generate_j1939_22_envelope(int_arbitrationID, dummy_data)
+                # 1. FORMAT SENDER (What goes ONTO the bus)
+                if is_sender_fd:
+                    send_id, send_payload = utils.generate_j1939_22_envelope(int_arbitrationID, dummy_data)
                     msg = can.Message(is_rx=False, is_extended_id=True, is_fd=True, bitrate_switch=True, dlc=9, 
-                                      arbitration_id=envelope_id, data=envelope_payload)
-                    
-                    expected_id = int_arbitrationID
-                    expected_data = dummy_data
-                    expected_is_fd = False
-
-                # BRANCH B: Standard to CAN-FD (Forward Routing)
-                elif not is_sender_fd and is_receiver_fd:
-                    msg = can.Message(is_rx=False, is_extended_id=True, 
-                                      arbitration_id=int_arbitrationID, data=dummy_data)
-                    
-                    expected_envelope_id, expected_envelope_payload = utils.generate_j1939_22_envelope(int_arbitrationID, dummy_data)
-                    expected_id = expected_envelope_id
-                    expected_data = expected_envelope_payload
-                    expected_is_fd = True
-
-                # BRANCH C: Standard to Standard (Classic Routing)
-                elif not is_sender_fd and not is_receiver_fd:
-                    msg = can.Message(is_rx=False, is_extended_id=True, 
-                                      arbitration_id=int_arbitrationID, data=dummy_data)
-                    
-                    expected_id = int_arbitrationID
-                    expected_data = dummy_data
-                    expected_is_fd = False
-                    
-                # BRANCH D: CAN-FD to CAN-FD (Passthrough)
+                                      arbitration_id=send_id, data=send_payload)
                 else:
-                    envelope_id, envelope_payload = utils.generate_j1939_22_envelope(int_arbitrationID, dummy_data)
-                    msg = can.Message(is_rx=False, is_extended_id=True, is_fd=True, bitrate_switch=True, dlc=9, 
-                                      arbitration_id=envelope_id, data=envelope_payload)
-                    
-                    expected_id = envelope_id
-                    expected_data = envelope_payload
+                    msg = can.Message(is_rx=False, is_extended_id=True, 
+                                      arbitration_id=int_arbitrationID, data=dummy_data)
+
+                # 2. FORMAT RECEIVER (What comes OFF the bus)
+                if is_receiver_fd:
+                    expected_id, expected_data = utils.generate_j1939_22_envelope(int_arbitrationID, dummy_data)
                     expected_is_fd = True
+                else:
+                    expected_id = int_arbitrationID
+                    expected_data = dummy_data
+                    expected_is_fd = False
 
                 # ---------------------------------------------------------
                 # EXECUTION & RETRY LOGIC
@@ -195,22 +207,23 @@ def run_injection_gateway_test():
                     print(f"--> FINAL RESULT: Gateway {senderName} to {receiverName} FAILED ID {arbitrationID_raw}.")
                     print("-" * 50)
             
-            # --- SHUTDOWN BEFORE NEXT TOPOLOGY ---
-            print(f"\n[Hardware Release] Closing channels for {senderName} -> {receiverName}...")
-            sender.shutdown()
-            receiver.shutdown()
-    
+            # (Notice there is NO hardware shutdown here! The loop just smoothly continues.)
+            
     except Exception as general_error:
         print("\n[Script Error] The script crashed:")
         traceback.print_exc()
         
-        if 'sender' in locals() and sender is not None: sender.shutdown()
-        if 'receiver' in locals() and receiver is not None: receiver.shutdown()
+    finally:
+        # --- TRUE HARDWARE TEARDOWN ---
+        # This only runs when EVERY route is finished, or if the script crashes.
+        print("\n[Hardware Release] Closing all active channels and shutting down...")
+        for bus_name, bus in ACTIVE_BUSES.items():
+            if bus is not None:
+                try: 
+                    bus.shutdown()
+                    print(f" - Closed {bus_name}")
+                except: 
+                    pass
 
 if __name__ == "__main__":
-    # run_injection_gateway_test()
-    allChannelConfigs = (can.detect_available_configs(interfaces=['vector']))
-    # print(allChannelConfigs[0]["serial"])
-    sender = vector.VectorBus(**allChannelConfigs[1])
-    print(sender.channel_info)
-    sender.shutdown()
+    run_injection_gateway_test()

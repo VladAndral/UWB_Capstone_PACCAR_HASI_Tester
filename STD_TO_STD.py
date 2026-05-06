@@ -134,12 +134,4 @@ def run__injection_gateway_test():
         if receiver is not None: receiver.shutdown()
 
 if __name__ == "__main__":
-    # run__injection_gateway_test()
-        # Get the config info from one of the channels on the Vector hardware
-    allChannelConfigs = (can.detect_available_configs(interfaces=['vector']))
-    print(allChannelConfigs[0]["serial"])
-    print(allChannelConfigs[0]["vector_channel_config"])
-    print(allChannelConfigs[0]["vector_channel_config"].bus_params.can.bitrate)
-    # sender = vector.VectorBus(allChannelConfigs[0]["vector_channel_config"])
-    # for listItem in config_ch:
-    #     print(listItem)
+    run__injection_gateway_test()

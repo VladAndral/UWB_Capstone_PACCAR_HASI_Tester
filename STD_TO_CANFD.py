@@ -7,8 +7,8 @@ PACCAR_HIL_ENVIRONMENT = False
 CAN_STD = ['VCAN1', 'VCAN10', 'PCAN1', 'PCAN2', 'VCAN2', 'VCAN20']
 CAN_FD = ['ADSCAN1', 'ADSCAN2']
 
-SENDER_CHANNEL = 1 
-RECEIVER_CHANNEL = 0
+SENDER_CHANNEL = 0
+RECEIVER_CHANNEL = 1
 
 def run__injection_gateway_test():
     
@@ -34,7 +34,8 @@ def run__injection_gateway_test():
         data_sjw=1,
     )
     
-    # Initalize sender and receiver variables to None so that they can be safely shutdown in the except block, even if initialization fails and they aren't assigned a bus object
+    # Initalize sender and receiver variables to None 
+    # so that they can be safely shutdown in the except block, even if initialization fails and they aren't assigned a bus object
     sender = None
     receiver = None
     
@@ -43,7 +44,8 @@ def run__injection_gateway_test():
         # Sender is standard CAN
         # Set to CH1 for sender(locked by vector hardware for some reason)
         sender = vector.VectorBus(channel=SENDER_CHANNEL, 
-                                  bitrate=500000)
+                                  bitrate=500000,
+                                  app_name = 'CANoe')
                     
         # Receiver is CAN-FD
         # Set to CH0 for receiver(locked by vector hardware for some reason)
@@ -52,7 +54,8 @@ def run__injection_gateway_test():
         # Set timing=timing if needed
         receiver = vector.VectorBus(channel=RECEIVER_CHANNEL, 
                                     fd=True,
-                                    timing=timing)
+                                    timing=timing,
+                                    app_name = 'CANoe')
     
     # This error usually only happens if CANoe is running and has locked the channels
     except can.exceptions.CanInitializationError as hardware_error:

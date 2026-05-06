@@ -32,6 +32,8 @@ def loadFilePath(fileToLoad:str):
         return None
 
 def format_arbitrationID(arbitrationID:str, outputType:str):
+    
+    # Let's think about converting this function into one using bit masking
     """Converts an arbitration id in provided int form to hex
 
     Args:
@@ -122,69 +124,6 @@ def scrape_dbc_for_gateways(filePath:str):
             curLineUnparsed = dbcFile.readline()
     
     return toReturn_dict
-
-def convertFD_toCAN(initial_msg:int):
-    
-    
-    ###
-    # Returned ID should always start with (0x)18
-    # PGN is 18 bits, 0index 8-25
-    # PDU-F field is contained within PGN (0index 16-23), and
-    #   should always be set to 25. However,
-    #   - If, before changing to 25, PDU-F is less than
-    #       0xF0 (decimal 240), the destination address (0index 8-15)
-    #       is not changed
-    #   - If PDU-F is 0xF1 or greater (decimal 241),
-    #       the group extension should be set to FF
-    #       (no longer a dest. addr.)
-    # Source address is never changed
-    # So at the very end, CAN-FD message should always look like
-    #   0x1825...
-    ###
-    
-    # Turing the int into binary (b) and ensuring there are always 
-    # 32 digits displayed (032), in string format
-    binary_initial_msg = f"{initial_msg:032b}"
-    
-    #     # debug
-    # binary_initial_msg_debug = ""
-    # for pos in range(len(binary_initial_msg)):
-    #     binary_initial_msg_debug += binary_initial_msg[pos]
-    #     if (pos+1)%4 == 0:
-    #         binary_initial_msg_debug += " "
-    
-    #     # debug
-    # print(f"convertFD initial msg in binary, LSB righthand side: {binary_initial_msg_debug}")
-    
-    # Flipping string b/c LSB is at the END of list, i.e. MSB is at index 0,
-    # and indexing will be easier if LSB is at index 0
-    binary_initial_msg = binary_initial_msg[::-1]
-        # debug
-    # print(f"convertFD initial msg in binary, LSB lefthand side: {binary_initial_msg}")
-    
-    # Converted message will always start with this
-    message_starter = f"{0x1825:b}"
-    
-    # Get PF
-    PDU_Format = int(binary_initial_msg[16:24], 2)  # Upper bound is not inclusive
-        # debug
-    # print(f"PDU Format: {PDU_Format}, binary bits 16-23 are {binary_initial_msg[16:24]}")
-    if PDU_Format < 240:
-        PDU_Specific = binary_initial_msg[8:16]  # Destination Address
-    else:
-        PDU_Specific = f"{0xFF:b}"  # Group Extension
-    
-    # Get source address
-    source_address = binary_initial_msg[0:8]
-    
-    # We flipped the binary number for easy list indexing, but
-    # make sure to flip it back to its original endian state!
-    PDU_Specific = PDU_Specific[::-1]
-    source_address = source_address[::-1]
-    
-    classic_msg = message_starter + PDU_Specific + source_address
-    classic_msg = int(classic_msg, 2)
-    return classic_msg
 
 def generate_j1939_22_envelope(int_arbitrationID:int, dummy_data:list):
     """Dynamically packs an 8-byte J1939 payload into a 12-byte J1939-22 CAN-FD envelope (PGN 9472 / 0x25000).
