@@ -166,7 +166,13 @@ def run_paccar_hil_test():
                         # Check against dynamic expected_id
                         if receivedMessage.arbitration_id == expected_id and receivedMessage.is_fd == expected_is_fd:
                             
-                            print(f"    [PASS] Routing Successful! ({elapsed_time_ms:.1f} ms) | Expected: 0x{expected_id:08X} == Received: 0x{receivedMessage.arbitration_id:08X}\n")
+                            # change wording of [PASS] to better reflect gateway test case
+                            if is_sender_fd and not is_receiver_fd:
+                                print(f"    [PASS] Routing Successful (FD Envelope Unpacked)! ({elapsed_time_ms:.1f} ms) | Target: 0x{expected_id:08X} == Received: 0x{receivedMessage.arbitration_id:08X}\n")
+                            elif not is_sender_fd and is_receiver_fd:
+                                print(f"    [PASS] Routing Successful (FD Envelope Packed)! ({elapsed_time_ms:.1f} ms) | Expected: 0x{expected_id:08X} == Received: 0x{receivedMessage.arbitration_id:08X}\n")
+                            else:
+                                print(f"    [PASS] Routing Successful (Logical ID Verified)! ({elapsed_time_ms:.1f} ms) | Expected: 0x{expected_id:08X} == Received: 0x{receivedMessage.arbitration_id:08X}\n")
                             test_passed = True
                             break 
                         else:
