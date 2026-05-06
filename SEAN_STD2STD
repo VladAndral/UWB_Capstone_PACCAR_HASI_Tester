@@ -69,28 +69,28 @@ def run__injection_gateway_test():
             # This if branch is only for testing non CAN FD ports ADSCAN#, since they require special handling/formatting
             # if senderName[0] == ('V' or 'P') and receiverName[0] == ('V' or 'P'):
             
-            if senderName[0] == ("VCAN1"):
+            if senderName[0] == ('VCAN1'):
                 sender = vector.VectorBus(serial=VCAN1_SERIAL, channel=VCAN1_CHANNEL, bitrate=VCAN1_BITRATE)
-            elif senderName[0] == ("VCAN10"):
+            elif senderName[0] == ('VCAN10'):
                 sender = vector.VectorBus(serial=VCAN10_SERIAL, channel=VCAN10_CHANNEL, bitrate=VCAN10_BITRATE)
-            elif senderName[0] == ("PCAN1"):
+            elif senderName[0] == ('PCAN1'):
                 sender = vector.VectorBus(serial=PCAN1_SERIAL, channel=PCAN1_CHANNEL, bitrate=PCAN1_BITRATE)
-            elif senderName[0] == ("PCAN2"):
+            elif senderName[0] == ('PCAN2'):
                 sender = vector.VectorBus(serial=PCAN2_SERIAL, channel=PCAN2_CHANNEL, bitrate=PCAN2_BITRATE)
-            elif senderName[0] == ("VCAN2"):
+            elif senderName[0] == ('VCAN2'):
                 sender = vector.VectorBus(serial=VCAN2_SERIAL, channel=VCAN2_CHANNEL, bitrate=VCAN2_BITRATE)
             else:
                 sender = vector.VectorBus(serial=VCAN20_SERIAL, channel=VCAN20_CHANNEL, bitrate=VCAN20_BITRATE)
 
-            if receiverName[0] == ("VCAN1"):
+            if receiverName[0] == ('VCAN1'):
                 receiver = vector.VectorBus(serial=VCAN1_SERIAL, channel=VCAN1_CHANNEL, bitrate=VCAN1_BITRATE)
-            elif receiverName[0] == ("VCAN10"):
+            elif receiverName[0] == ('VCAN10'):
                 receiver = vector.VectorBus(serial=VCAN10_SERIAL, channel=VCAN10_CHANNEL, bitrate=VCAN10_BITRATE)
-            elif receiverName[0] == ("PCAN1"):
+            elif receiverName[0] == ('PCAN1'):
                 receiver = vector.VectorBus(serial=PCAN1_SERIAL, channel=PCAN1_CHANNEL, bitrate=PCAN1_BITRATE)
-            elif receiverName[0] == ("PCAN2"):
+            elif receiverName[0] == ('PCAN2'):
                 receiver = vector.VectorBus(serial=PCAN2_SERIAL, channel=PCAN2_CHANNEL, bitrate=PCAN2_BITRATE)
-            elif receiverName[0] == ("VCAN2"):
+            elif receiverName[0] == ('VCAN2'):
                 receiver = vector.VectorBus(serial=VCAN2_SERIAL, channel=VCAN2_CHANNEL, bitrate=VCAN2_BITRATE)
             else:
                 receiver = vector.VectorBus(serial=VCAN20_SERIAL, channel=VCAN20_CHANNEL, bitrate=VCAN20_BITRATE)
