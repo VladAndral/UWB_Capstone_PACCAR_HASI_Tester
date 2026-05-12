@@ -5,6 +5,7 @@ import time
 import traceback
 from can.interfaces import vector
 import random
+from can.interfaces.vector import exceptions as vector_exceptions
 
 # Be Sure to Install python-can
 # pip install python-can
@@ -26,6 +27,8 @@ j1939_fd_timing = can.BitTimingFd.from_bitrate_and_segments(
 VECTOR_APPLICATION_NAME = 'CANoe'
 
 # Profiles
+# STD for J1939 CAN Classic Ports
+# FD for J1939-22 CAN Fast Data Ports
 STD_PROFILE = {'bitrate': 500000, 'app_name': VECTOR_APPLICATION_NAME}
 FD_PROFILE  = {'fd': True, 'timing': j1939_fd_timing, 'app_name': VECTOR_APPLICATION_NAME}
 
@@ -41,7 +44,7 @@ NETWORK_CONFIGS = {
     'ADSCAN2': {'channel': 7, **FD_PROFILE}
 }
 
-# Global array to hold all 8 active physical connections
+# Array to hold active physical connections(# of CAN ports on VN1640A, etc.)
 ACTIVE_BUSES = {}
 
 # ==============================================================================
@@ -70,13 +73,34 @@ def run_paccar_hil_test():
                     route_groups[route_pair] = []
                 route_groups[route_pair].append(arbitrationID_raw)
 
+        # --- GATEWAY ROUTE SANITY CHECK ---
+        print("\n" + "="*70)
+        print("PARSED GATEWAY ROUTES FROM DBC FILE")
+        print("="*70)
+        for route_pair, id_list in route_groups.items():
+            # Using :<8 to perfectly align the arrows in the terminal
+            print(f" - Mapped Route: {route_pair[0]:<8} -> {route_pair[1]:<8} | {len(id_list)} IDs")
+        print("-" * 70)
+        print(f" Total Unique Routing Paths: {len(route_groups)}") 
+
         # --- 2. INITIALIZE ALL 8 CHANNELS
         print("\n" + "="*70)
-        print(" [PACCAR LAB] INITIALIZING ALL 8 VECTOR CHANNELS...")
+        print("INITIALIZING ALL 8 VECTOR CHANNELS...")
         print("="*70)
         for bus_name, bus_params in NETWORK_CONFIGS.items():
-            ACTIVE_BUSES[bus_name] = vector.VectorBus(**bus_params)
-            print(f" - Successfully opened {bus_name}")
+            try:
+                ACTIVE_BUSES[bus_name] = vector.VectorBus(**bus_params)
+                print(f" - Successfully opened {bus_name}")
+            except (can.CanInitializationError, vector_exceptions.VectorInitializationError) as init_error:
+                raise RuntimeError(
+                    f"\n\n{'!'*70}\n"
+                    f"[FATAL HARDWARE ERROR] Failed to connect to Vector channel: {bus_name}\n"
+                    f"{'!'*70}\n"
+                    f"\nPlease check the following:\n"
+                    f"\nIs the Vector VN1640A physically plugged into the USB port?\n"
+                  
+                    f"\nOriginal Vector Error: {init_error}\n"
+                ) from None
 
         # --- 3. THE TOPOLOGY EXECUTION LOOP ---
         for route_pair, id_list in route_groups.items():
@@ -98,6 +122,9 @@ def run_paccar_hil_test():
             for arbitrationID_raw in id_list:
                 int_arbitrationID = int(utils.format_arbitrationID(arbitrationID_raw, "int"))
 
+                # if msg isn't formatted correctly according to is_sender_fd boolean, then I want to throw an error so I know that the boolean is the issue
+                msg = None
+
                 # randomized data payload everytime a new arbitration id id put on the bus
                 dummy_data = [random.randint(0, 255) for _ in range(8)]
 
@@ -110,6 +137,9 @@ def run_paccar_hil_test():
                     # I accidentally deleted this...
                     msg = can.Message(is_rx=False, is_extended_id=True, 
                                       arbitration_id=int_arbitrationID, data=dummy_data)
+                    
+                if msg is None:
+                    raise RuntimeError(f"FATAL SCRIPT LOGIC: Formatting bypassed for ID {arbitrationID_raw}. Halting to prevent ghost frame injection.")
 
                 # FORMAT RECEIVER (What comes OFF the bus)
                 if is_receiver_fd:
@@ -134,6 +164,7 @@ def run_paccar_hil_test():
                     while receiver.recv(0.0) is not None:
                         pass
                     
+                    # Get Current time
                     start_time = time.time()
                     
                     sender.send(msg)
