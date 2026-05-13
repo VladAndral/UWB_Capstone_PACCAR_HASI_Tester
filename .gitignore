@@ -8,3 +8,4 @@ filepath.txt
 .venv/
 .pytest_cache/
 *.log
+paccar_report.xml

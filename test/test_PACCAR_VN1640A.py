@@ -1,8 +1,6 @@
 import utils
 import can
-import sys
 import time
-import traceback
 from can.interfaces import vector
 import random
 from can.interfaces.vector import exceptions as vector_exceptions
