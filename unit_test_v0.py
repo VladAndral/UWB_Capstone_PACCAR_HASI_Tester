@@ -6,6 +6,7 @@ from can.interfaces import vector
 import random
 from can.interfaces.vector import exceptions as vector_exceptions
 
+
 # Be Sure to Install python-can
 # pip install python-can
 
@@ -79,6 +80,8 @@ for arbitrationID_raw, channelList in gatewaySpecDict.items():
 # Sort the tests by alphabetical order on sender, then receiver, then arbitration ID
 test_cases.sort(key=lambda x: (x[0], x[1], x[2]))
 
+print(f"\n---> WARNING: FOUND {len(test_cases)} TEST CASES <---")
+
 # Create human readable test names for each test case to make debugging easier. These will show up in the pytest output.
 test_names = []
 for sender, receiver, arbitrationID_raw in test_cases:
@@ -103,7 +106,7 @@ def active_buses():
     try:
         for bus_name, bus_params in NETWORK_CONFIGS.items():
             if VIRTUAL_MODE:
-                ACTIVE_BUSES[bus_name] = can.interface.Bus(bustype='virtual', channel=bus_name, bitrate=500000)
+                ACTIVE_BUSES[bus_name] = can.interface.Bus(interface='virtual', channel=bus_name, bitrate=500000)
             else:
                 try:
                     ACTIVE_BUSES[bus_name] = vector.VectorBus(**bus_params)
