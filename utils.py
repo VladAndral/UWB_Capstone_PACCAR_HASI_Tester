@@ -14,7 +14,7 @@ def loadFilePath(fileToLoad:str):
         dbcFile.readable()
         # If we could not open the file
     except OSError:
-        print("Error: could not open/read file ", "filepath.txt")
+        print("Error: could not open/read file:", "filepath.txt\nDoes ""filepath.txt"" exist?")
         sys.exit()
         
     with dbcFile:
