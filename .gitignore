@@ -7,3 +7,4 @@ filepath.txt
 *temp*.*
 .venv/
 .pytest_cache/
+*.log
