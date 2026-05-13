@@ -13,6 +13,7 @@ import pytest_check as check
 # pip install python-can
 
 # type: "pytest test_PACCAR_VN1640A.py -v -s" in terminal to run
+# type: "python -m pytest  test/test_PACCAR_VN1640A.py --junitxml=report.xml" in terminal to generate XML
 
 # ==============================================================================
 # HARDWARE CONFIGURATION
