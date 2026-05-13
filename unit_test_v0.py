@@ -10,9 +10,12 @@ from can.interfaces.vector import exceptions as vector_exceptions
 
 # Be Sure to Install python-can
 # pip install python-can
+
 # run the test with: pytest unit_test_v0.py -v -s
 # run the test with HTML report(with date and time in filename): pytest unit_test_v0.py -v -s --html="paccar_report_$(get-date -f 'yyyy-MM-dd_HH-mm').html"
+# open html file from vscode terminal with: start paccar_report_2024-XX-XX_XX-XX.html
 # might have to install pytest-html: python -m pip install pytest-html
+
 # Be sure to check MAX_RETRIES, timeout_end & receivedMessage, these can be adjusted for faster testing during development, but make sure to change them back to the original values for final testing and reporting
 
 # ==============================================================================
