@@ -11,8 +11,9 @@ from can.interfaces.vector import exceptions as vector_exceptions
 # Be Sure to Install python-can
 # pip install python-can
 # run the test with: pytest unit_test_v0.py -v -s
-# run the test with HTML report: pytest unit_test_v0.py -v -s --html=paccar_report.html
+# run the test with HTML report(with date and time in filename): pytest unit_test_v0.py -v -s --html="paccar_report_$(get-date -f 'yyyy-MM-dd_HH-mm').html"
 # might have to install pytest-html: python -m pip install pytest-html
+# Be sure to check MAX_RETRIES, timeout_end & receivedMessage, these can be adjusted for faster testing during development, but make sure to change them back to the original values for final testing and reporting
 
 # ==============================================================================
 # HARDWARE CONFIGURATION
@@ -177,7 +178,7 @@ def test_paccar_routing_logic(active_buses, senderName, receiverName, arbitratio
         expected_is_fd = False
     
     # --- 5. EXECUTION & RETRY LOGIC ---
-    MAX_RETRIES = 1
+    MAX_RETRIES = 1 # Set to 1 for development, but change to 5 for final testing and reporting
     found_routed_frame = False
     receivedMessage = None
     
@@ -200,10 +201,12 @@ def test_paccar_routing_logic(active_buses, senderName, receiverName, arbitratio
         sender.send(msg)
         
         # Find current time then add 1.0 seconds to it
+        # change 1.0 to 0.05 for faster timeout during development, but make sure to change it back to 1.0 for final testing and reporting since some frames can take a while to route through the gateway
         timeout_end = start_time + 0.05
 
         # watchdog timer for checking receiving bus for however long the difference is between time() and timeout_end
         while time.time() < timeout_end:
+            # change timeout value in recv() to 0.01 for faster checking during development, but make sure to change it back to 0.1 for final testing and reporting since some frames can take a while to route through the gateway
             receivedMessage = receiver.recv(0.01)
 
             # With randomized data, we can now check which ECU CAN port actually received the payload
