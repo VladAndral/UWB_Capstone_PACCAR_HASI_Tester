@@ -12,6 +12,8 @@ import pytest_check as check
 # Be Sure to Install python-can
 # pip install python-can
 
+# type: "pytest test_PACCAR_VN1640A.py -v -s" in terminal to run
+
 # ==============================================================================
 # HARDWARE CONFIGURATION
 # ==============================================================================
