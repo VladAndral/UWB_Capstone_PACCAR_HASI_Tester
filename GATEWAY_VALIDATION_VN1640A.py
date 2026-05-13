@@ -24,6 +24,7 @@ j1939_fd_timing = can.BitTimingFd.from_bitrate_and_segments(
     data_tseg1=15, data_tseg2=4, data_sjw=1
 )
 
+# Make sure this matches the application name configured in Vector Hardware Manager for the VN1640A channels (Default is "CANoe")
 VECTOR_APPLICATION_NAME = 'CANoe'
 
 # Profiles
@@ -66,8 +67,10 @@ def run_paccar_hil_test():
         route_groups = {}
         for arbitrationID_raw, channelList in gatewaySpecDict.items():
             for gatewayChannelPair in channelList:
-                eachChannel = gatewayChannelPair.split(":")
-                route_pair = (eachChannel[0], eachChannel[1])
+                
+                # Using the sender:receiver pair as the key for grouping all arbitration IDs that share the same gateway route
+                sender, receiver = gatewayChannelPair.split(":")
+                route_pair = (sender, receiver)
                 
                 if route_pair not in route_groups:
                     route_groups[route_pair] = []
@@ -190,6 +193,7 @@ def run_paccar_hil_test():
                                 break 
                     
                     # --- EVALUATION ---
+                    # --- EVALUATION ---
                     if found_routed_frame:
                         formatted_recv_payload = " ".join(f"{x:02x}" for x in receivedMessage.data)
                         print(f" <- Received on {receiverName}: 0x{receivedMessage.arbitration_id:08X} | {formatted_recv_payload}")
@@ -207,11 +211,11 @@ def run_paccar_hil_test():
                             test_passed = True
                             break 
                         else:
-                           
-                            print(f"    [PASS / MUTATED] Frame routed perfectly, but gateway translated the ID/Protocol! ({elapsed_time_ms:.1f} ms)")
-                            print(f"           Expected ID : 0x{expected_id:08X}")
-                            print(f"           Received ID : 0x{receivedMessage.arbitration_id:08X}\n")
-                            test_passed = True 
+                            # --- THE FIX: Changed PASS to FAIL and removed test_passed = True ---
+                            print(f"    [FAIL / MUTATED] Frame routed, but gateway dangerously translated the ID/Protocol! ({elapsed_time_ms:.1f} ms)")
+                            print(f"           Expected   : 0x{expected_id:08X} (FD: {expected_is_fd})")
+                            print(f"           Received   : 0x{receivedMessage.arbitration_id:08X} (FD: {receivedMessage.is_fd})\n")
+                            # By breaking here without setting test_passed = True, the script officially logs it as a FAILED ID
                             break
                             
                     else:
