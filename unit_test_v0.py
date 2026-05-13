@@ -1,8 +1,6 @@
 import utils
 import can
-import sys
 import time
-import traceback
 import pytest
 from can.interfaces import vector
 import random
