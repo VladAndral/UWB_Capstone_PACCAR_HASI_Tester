@@ -194,20 +194,17 @@ def test_paccar_routing_logic(active_buses, senderName, receiverName, arbitratio
         while receiver.recv(0.0) is not None:
             pass
         
-        # =========================================================
-        # SOFTWARE MOCK FOR VIRTUAL TESTING
-        # =========================================================
         # Get Current time
         start_time = time.time()
         
         sender.send(msg)
         
         # =========================================================
-        # SOFTWARE MOCK FOR VIRTUAL TESTING (WITH FAULT INJECTION)
+        # SIMULATED FAULT INJECTION FOR VIRTUAL TESTING
         # =========================================================
         if VIRTUAL_MODE:
             
-            def mock_hardware_gateway():
+            def fake_hardware_gateway():
                 # Simulate hardware processing latency
                 time.sleep(0.015) 
                 
@@ -219,7 +216,7 @@ def test_paccar_routing_logic(active_buses, senderName, receiverName, arbitratio
                 else:
                     injected_id = expected_id
                     
-                # 3. Build the translated frame
+                # Force a correct frame format based on what the receiver expects
                 fake_msg = can.Message(
                     is_extended_id=True,
                     is_fd=expected_is_fd,
@@ -227,12 +224,12 @@ def test_paccar_routing_logic(active_buses, senderName, receiverName, arbitratio
                     data=expected_data
                 )
                 
-                # 4. Temporarily attach to the receiver's channel to inject the frame
+                # Attach to the receiver's channel to inject the frame
                 with can.interface.Bus(interface='virtual', channel=receiverName) as dummy_ecu:
                     dummy_ecu.send(fake_msg)
 
-            # Fire off the mock ECU in the background so the main test loop can immediately start listening
-            threading.Thread(target=mock_hardware_gateway, daemon=True).start()
+            # Fire off the fake ECU in the background so the main test loop can immediately start listening
+            threading.Thread(target=fake_hardware_gateway, daemon=True).start()
         # =========================================================
 
         # Find current time then add 1.0 seconds to it
