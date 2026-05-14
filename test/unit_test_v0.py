@@ -5,12 +5,10 @@ import pytest
 from can.interfaces import vector
 import random
 from can.interfaces.vector import exceptions as vector_exceptions
+import threading
 
-
-# Be Sure to Install python-can
-# pip install python-can
-
-# run the test with: pytest unit_test_v0.py -v -s
+# If unit_test_v0 is in the root directory, run the test with: pytest unit_test_v0.py -v -s
+# If it's in a subdirectory called "test", run with: pytest test/unit_test_v0.py -v -s
 
 # Be sure to check MAX_RETRIES, timeout_end & receivedMessage, these can be adjusted for faster testing during development, but make sure to change them back to the original values for final testing and reporting
 
@@ -195,14 +193,50 @@ def test_paccar_routing_logic(active_buses, senderName, receiverName, arbitratio
         # THEN we start inject the new CAN message
         while receiver.recv(0.0) is not None:
             pass
-
+        
+        # =========================================================
+        # SOFTWARE MOCK FOR VIRTUAL TESTING
+        # =========================================================
         # Get Current time
         start_time = time.time()
         
         sender.send(msg)
         
+        # =========================================================
+        # SOFTWARE MOCK FOR VIRTUAL TESTING (WITH FAULT INJECTION)
+        # =========================================================
+        if VIRTUAL_MODE:
+            
+            def mock_hardware_gateway():
+                # Simulate hardware processing latency
+                time.sleep(0.015) 
+                
+                # Random Fault Injection
+                # 20% change to inject a fault by corrupting the arbitration ID, which should cause the test to fail
+                # Want to check if test holds up against random data corruption
+                if random.random() < 0.20:
+                    injected_id = expected_id ^ 0xFF # Flip bits to corrupt ID
+                else:
+                    injected_id = expected_id
+                    
+                # 3. Build the translated frame
+                fake_msg = can.Message(
+                    is_extended_id=True,
+                    is_fd=expected_is_fd,
+                    arbitration_id=injected_id,
+                    data=expected_data
+                )
+                
+                # 4. Temporarily attach to the receiver's channel to inject the frame
+                with can.interface.Bus(interface='virtual', channel=receiverName) as dummy_ecu:
+                    dummy_ecu.send(fake_msg)
+
+            # Fire off the mock ECU in the background so the main test loop can immediately start listening
+            threading.Thread(target=mock_hardware_gateway, daemon=True).start()
+        # =========================================================
+
         # Find current time then add 1.0 seconds to it
-        # change 1.0 to 0.05 for faster timeout during development, but make sure to change it back to 1.0 for final testing and reporting since some frames can take a while to route through the gateway
+        # change 1.0 to 0.05 for faster timeout during development...
         timeout_end = start_time + 0.05
 
         # watchdog timer for checking receiving bus for however long the difference is between time() and timeout_end
@@ -222,14 +256,14 @@ def test_paccar_routing_logic(active_buses, senderName, receiverName, arbitratio
     # --- EVALUATION ---
     
     if not found_routed_frame:
-        pytest.fail(f"[FAIL] Gateway dropped the frame (Timeout).")
+        pytest.fail(f"[FAIL] Timeout: Frame injected on {senderName} failed to appear on {receiverName} within {timeout_end - start_time:.2f}s.")
 
     formatted_recv_payload = " ".join(f"{x:02x}" for x in receivedMessage.data)
     print(f" <- Received on {receiverName}: 0x{receivedMessage.arbitration_id:08X} | {formatted_recv_payload}")
 
     # Check against dynamic expected_id
     assert receivedMessage.arbitration_id == expected_id, \
-        f"[PASS / MUTATED] Frame routed perfectly, but gateway translated the ID! Expected: 0x{expected_id:08X}, Got: 0x{receivedMessage.arbitration_id:08X}"
+        f"[PASS / MUTATED] Frame was routed, but gateway translated the ID Unexpectedly! Expected: 0x{expected_id:08X}, Got: 0x{receivedMessage.arbitration_id:08X}"
     
     assert receivedMessage.is_fd == expected_is_fd, \
         f"[PASS / MUTATED] Protocol translated! Expected FD: {expected_is_fd}, Got FD: {receivedMessage.is_fd}"
@@ -240,4 +274,4 @@ def test_paccar_routing_logic(active_buses, senderName, receiverName, arbitratio
     elif not is_sender_fd and is_receiver_fd:
         print(f"    [PASS] Routing Successful (FD Envelope Packed)! ({elapsed_time_ms:.1f} ms)")
     else:
-        print(f"    [PASS] Routing Successful (Logical ID Verified)! ({elapsed_time_ms:.1f} ms)")
+        print(f"    [PASS] Routing Successful (Arbitration ID Preserved)! ({elapsed_time_ms:.1f} ms)")
