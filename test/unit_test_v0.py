@@ -14,7 +14,7 @@ import threading
 # HARDWARE & TIMEOUT CONFIGURATION
 # ==============================================================================
 
-VIRTUAL_MODE = False  # Set to False when plugged into the VN1640A
+VIRTUAL_MODE = True  # Set to False when plugged into the VN1640A
 
 # DEV NOTE: Set these to 1.0s and 0.1s respectively for final hardware reporting.
 # Lowered to 0.05s and 0.01s for faster virtual development.
@@ -27,11 +27,11 @@ CAN_FD = ['ADSCAN1', 'ADSCAN2']
 
 # Shared J1939 CAN-FD timing profile
 # May delete if the minimal FD profile works for ADSCAN1 and ADSCAN2
-# j1939_fd_timing = can.BitTimingFd.from_bitrate_and_segments(
-#     f_clock=80_000_000, nom_bitrate=500_000, data_bitrate=2_000_000, 
-#     nom_tseg1=63, nom_tseg2=16, nom_sjw=4, 
-#     data_tseg1=15, data_tseg2=4, data_sjw=1
-# )
+j1939_fd_timing = can.BitTimingFd.from_bitrate_and_segments(
+    f_clock=80_000_000, nom_bitrate=500_000, data_bitrate=2_000_000, 
+    nom_tseg1=63, nom_tseg2=16, nom_sjw=4, 
+    data_tseg1=15, data_tseg2=4, data_sjw=1
+)
 
 # Make sure this matches the application name configured in Vector Hardware Manager for the VN1640A channels (Default is "CANoe")
 VECTOR_APPLICATION_NAME = 'CANoe'
@@ -40,11 +40,7 @@ VECTOR_APPLICATION_NAME = 'CANoe'
 # STD for J1939 CAN Classic Ports
 # FD for J1939-22 CAN Fast Data Ports
 STD_PROFILE = {'bitrate': 500000, 'app_name': VECTOR_APPLICATION_NAME}
-#FD_PROFILE  = {'fd': True, 'timing': j1939_fd_timing, 'app_name': VECTOR_APPLICATION_NAME}
-
-# Want to try a minimal profile  for CAN FD Channels
-# Uncomment this and comment out the more detailed FD_PROFILE above
-FD_PROFILE  = {'fd': True, 'bitrate': 500000, 'data_bitrate': 2000000, 'app_name': VECTOR_APPLICATION_NAME}
+FD_PROFILE  = {'fd': True, 'timing': j1939_fd_timing, 'app_name': VECTOR_APPLICATION_NAME}
 
 # The Master Channel Dictionary
 NETWORK_CONFIGS = {
