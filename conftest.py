@@ -9,10 +9,10 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
     print(f"\n" + "="*60)
     
     if 'failed' in stats:
-        numFails = len(stats['failed'])
-        print(f" GATEWAY TEST SUMMARY ({numFails} FAILED) ")
+        numFails = len(stats['failed']) if 'failed' in stats else 0
+        numSuccesses = len(stats['passed']) if 'passed' in stats else 0
+        print(f" GATEWAY TEST SUMMARY ({numFails} FAILED & {numSuccesses} PASSED) ")
         print(f"="*60)
-        print(f"Sender-Receiver-ArbitrationID")
         for test in stats['failed']:
             if '[' in test.nodeid:
                 tx_rx_arb = test.nodeid.split('[')[-1].rstrip(']')

@@ -86,10 +86,12 @@ for arbitrationID_raw, channelList in gatewaySpecDict.items():
         receiver_protocol = "CAN-FD" if receiver in CAN_FD else "CAN Classic"
         gateway_type = f"{sender_protocol} -> {receiver_protocol}"
         
-        # 4. Build the ultimate terminal label!
-        terminal_label = f"ROUTE: {sender}:{receiver} | GATEWAY TYPE: {gateway_type} | {msg_name} ({hex_id})"
+        # 4. Build the fully aligned terminal label!
+        route_pair = f"{sender}:{receiver}"
         
-        # Pass it into the Pytest parameter ID
+        # Added :<35 to msg_name to create a strict third column
+        terminal_label = f"ROUTE: {route_pair:<25} | GATEWAY TYPE: {gateway_type:<28} | {msg_name:<35} ({hex_id} | Raw: {arbitrationID_raw})"
+        
         test_cases.append(pytest.param(sender, receiver, arbitrationID_raw, msg_name, id=terminal_label))
 
 print(f"\n---> WARNING: MAPPED {len(test_cases)} UNIQUE GATEWAY ROUTES <---")
@@ -188,7 +190,7 @@ def test_paccar_routing_logic(active_buses, senderName, receiverName, arbitratio
     elapsed_time_ms = 0.0
 
     # 2. Hardware Retry Loop
-    print(f"\n=== Testing: {msg_name} | 0x{expected_id:08X} ({gateway_type}) ===")
+    print(f"\n=== Testing: {msg_name} | 0x{expected_id:08X} (Raw: {arbitrationID_raw}) ({gateway_type}) ===")
     
     for attempt in range(MAX_RETRIES):
         formatted_send_payload = " ".join(f"{x:02x}" for x in msg.data)
