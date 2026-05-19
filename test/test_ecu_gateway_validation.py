@@ -13,12 +13,13 @@ import threading
 # NOTE input file path for DBC_PATH environment variable
 # $env:DBC_PATH="C:\Users\garci\Downloads\HASI_Primary_ALL_CAN (5).dbc"; $env:VIRTUAL_MODE="True"; pytest
 # Otherwise, ensure the Vector VN1640A is plugged in with the correct channels connected to the CAN bus and run:
+# $env:DBC_PATH="C:\Users\garci\Downloads\HASI_Primary_ALL_CAN (5).dbc"; $env:VIRTUAL_MODE="False"; pytest
 
 # ==============================================================================
 # HARDWARE & TIMEOUT CONFIGURATION
 # ==============================================================================
 
-# CI/CD pipelines can override this via environment variables (e.g., VIRTUAL_MODE=False)
+# environmental variable to toggle virtual mode for testing without physical hardware. Defaults to False
 env_virtual = os.getenv("VIRTUAL_MODE", "False")
 VIRTUAL_MODE = env_virtual.lower() in ('true', '1', 't')
 
@@ -58,6 +59,7 @@ NETWORK_CONFIGS = {
 # DATA FLATTENER & PARAMETERIZATION
 # ==============================================================================
 
+# environmental variable to input the DBC file path, defaults to "HASI_Primary_ALL_CAN.dbc" in the current directory
 primaryDBC_filepath = os.getenv("DBC_PATH", "HASI_Primary_ALL_CAN.dbc")
 if not os.path.exists(primaryDBC_filepath):
     raise FileNotFoundError(
@@ -71,25 +73,25 @@ gatewaySpecDict, messageNameDict = utils.scrape_dbc_for_gateways(primaryDBC_file
 test_cases = []
 for arbitrationID_raw, channelList in gatewaySpecDict.items():
     
-    # 1. Get the Message Name
+    # Get the message name for terminal display 
     msg_name = messageNameDict.get(arbitrationID_raw, "UNKNOWN_MSG")
     
-    # 2. Get the mathematically correct Hex ID using your bitwise function
+    # Get arbitration ID in hex format for terminal display 
     masked_id = utils.format_arbitrationID(arbitrationID_raw, "int")
     hex_id = f"0x{masked_id:08X}"
     
     for gatewayChannelPair in channelList:
         sender, receiver = gatewayChannelPair.split(":")
         
-        # 3. Determine the gateway protocol translation
+        # Determine the gateway protocol translation
         sender_protocol = "CAN-FD" if sender in CAN_FD else "CAN Classic"
         receiver_protocol = "CAN-FD" if receiver in CAN_FD else "CAN Classic"
         gateway_type = f"{sender_protocol} -> {receiver_protocol}"
         
-        # 4. Build the fully aligned terminal label!
+        # terminal label route_pair is just the sender and receiver for easy identification in the terminal summary
         route_pair = f"{sender}:{receiver}"
         
-        # Added :<35 to msg_name to create a strict third column
+        # Terminal summary format
         terminal_label = f"ROUTE: {route_pair:<25} | GATEWAY TYPE: {gateway_type:<28} | {msg_name:<35} ({hex_id} | Raw: {arbitrationID_raw})"
         
         test_cases.append(pytest.param(sender, receiver, arbitrationID_raw, msg_name, id=terminal_label))
@@ -118,7 +120,7 @@ def active_buses():
                     ACTIVE_BUSES[bus_name] = vector.VectorBus(**bus_params)
                     print(f" - Successfully opened {bus_name}")
                 except (can.CanInitializationError, vector_exceptions.VectorInitializationError) as init_error:
-                    # Critical Failure: Halt immediately if physical hardware is missing
+                    # Halt immediately if physical hardware is missing
                     pytest.fail(
                         f"\n[FATAL HARDWARE ERROR] Failed to connect to Vector channel: {bus_name}\n"
                         f"Is the Vector VN1640A physically plugged into the USB port?\n"
@@ -141,7 +143,6 @@ def active_buses():
 # GATEWAY EXECUTION LOGIC (GATHER-ALL ARCHITECTURE)
 # ==============================================================================
 
-# Add msg_name to the decorator and the function signature
 @pytest.mark.parametrize("senderName, receiverName, arbitrationID_raw, msg_name", test_cases)
 def test_paccar_routing_logic(active_buses, senderName, receiverName, arbitrationID_raw, msg_name, record_property):
     
@@ -165,7 +166,7 @@ def test_paccar_routing_logic(active_buses, senderName, receiverName, arbitratio
     dummy_data = [random.randint(0, 255) for _ in range(8)]
     msg = None
 
-    # FORMAT SENDER (What goes ONTO the bus)
+    # Format sender message (What goes ONTO the bus)
     if is_sender_fd:
         send_id, send_payload = utils.generate_j1939_22_envelope(int_arbitrationID, dummy_data)
         msg = can.Message(is_rx=False, is_extended_id=True, is_fd=True, bitrate_switch=True, dlc=9, 
@@ -177,7 +178,7 @@ def test_paccar_routing_logic(active_buses, senderName, receiverName, arbitratio
     if msg is None:
         pytest.fail(f"FATAL SCRIPT LOGIC: Formatting bypassed for ID {arbitrationID_raw}.")
 
-    # FORMAT RECEIVER (What comes OFF the bus)
+    # Format receiver message (What comes OFF the bus)
     if is_receiver_fd:
         expected_id, expected_data = utils.generate_j1939_22_envelope(int_arbitrationID, dummy_data)
         expected_is_fd = True
@@ -236,7 +237,7 @@ def test_paccar_routing_logic(active_buses, senderName, receiverName, arbitratio
             formatted_recv_payload = " ".join(f"{x:02x}" for x in receivedMessage.data)
             print(f"   [RX] {receiverName:<8} : 0x{receivedMessage.arbitration_id:08X} | {formatted_recv_payload}")
 
-            # Strict validation - mutations are now marked as definitive failures
+            # Mutations on arbitration IDs are marked as failures
             if receivedMessage.arbitration_id == expected_id and receivedMessage.is_fd == expected_is_fd:
                 record_property("latency_ms", round(elapsed_time_ms, 2))
                 print(f"    [PASS] Routing Successful! ({elapsed_time_ms:.1f} ms) | Expected: 0x{expected_id:08X} == Received: 0x{receivedMessage.arbitration_id:08X}")
@@ -250,7 +251,7 @@ def test_paccar_routing_logic(active_buses, senderName, receiverName, arbitratio
                 
         else:
             print(f"    [FAIL] Gateway dropped the frame (Timeout).")
-    
+                
     # 4. Final Non-Blocking Assertion
-    # If the hardware never succeeded in 5 attempts, this logs the failure for the terminal summary without crashing the script.
+    # If the hardware never succeeded in MAX_RETRIES attempts, this logs the failure for the terminal summary without crashing the script.
     check.is_true(test_passed, f"Gateway {senderName}:{receiverName} FAILED ID {arbitrationID_raw}.")
