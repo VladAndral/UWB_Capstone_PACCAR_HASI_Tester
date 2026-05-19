@@ -6,6 +6,7 @@ import random
 from can.interfaces.vector import exceptions as vector_exceptions
 import pytest
 import pytest_check as check
+import os
 
 # type: "pytest test_PACCAR_VN1640A.py -v -s" in terminal to run
 # type: "python -m pytest test/test_PACCAR_VN1640A.py --junitxml=report.xml" in terminal to generate XML
@@ -48,12 +49,15 @@ NETWORK_CONFIGS = {
 # PACCAR GATEWAY TEST SCRIPT (8-CHANNEL FULL AUTOMATION)
 # ==============================================================================
 
-# Please put HASI_Primary_ALL_CAN.dbc in the same folder as this script!
-primaryDBC_filepath = utils.loadFilePath("primaryDBC")
-if not isinstance(primaryDBC_filepath, str): 
-    raise TypeError("filepath was returned as 'None'")
+primaryDBC_filepath = os.getenv("DBC_PATH", "HASI_Primary_ALL_CAN.dbc")
+if not os.path.exists(primaryDBC_filepath):
+    raise FileNotFoundError(
+        f"\n[FATAL CONFIG ERROR] Could not find DBC file at: '{primaryDBC_filepath}'\n"
+        f"Please check your DBC_PATH terminal argument or ensure the default file exists."
+    )
 
-gatewaySpecDict = utils.scrape_dbc_for_gateways(primaryDBC_filepath)
+# Unpack both dictionaries from the scraper
+gatewaySpecDict, messageNameDict = utils.scrape_dbc_for_gateways(primaryDBC_filepath)
 
 # --- 1. MASTER DATA GROUPING LOGIC ---
 route_groups = {}
