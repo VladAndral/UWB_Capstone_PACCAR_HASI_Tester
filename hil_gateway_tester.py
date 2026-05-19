@@ -95,7 +95,7 @@ def run_paccar_hil_test():
     )
 
     try:
-        # --- 1. MASTER DATA GROUPING LOGIC ---
+        # --- MASTER DATA GROUPING LOGIC ---
         route_groups = {}
         for arbitration_id_raw, channel_list in gateway_spec_dict.items():
             for gateway_channel_pair in channel_list:
@@ -117,7 +117,7 @@ def run_paccar_hil_test():
         print("-" * 70)
         print(f" Total Unique Routing Paths: {len(route_groups)}")
 
-        # --- 2. INITIALIZE ALL 8 CHANNELS (IF APPLICABLE) ---
+        # --- INITIALIZE ALL 8 CHANNELS (IF APPLICABLE) ---
         if PACCAR_HIL_ENVIRONMENT:
             print("\n" + "=" * 70)
             print("INITIALIZING ALL 8 VECTOR CHANNELS...")
@@ -139,7 +139,7 @@ def run_paccar_hil_test():
                         f"\nOriginal Vector Error: {init_error}\n"
                     ) from None
 
-        # --- 3. THE TOPOLOGY EXECUTION LOOP ---
+        # --- THE TOPOLOGY EXECUTION LOOP ---
         for route_pair, id_list in route_groups.items():
             sender_name = route_pair[0]
             receiver_name = route_pair[1]
@@ -238,7 +238,7 @@ def run_paccar_hil_test():
                     expected_data = dummy_data
                     expected_is_fd = False
 
-                # --- 5. EXECUTION & RETRY LOGIC ---
+                # --- EXECUTION & RETRY LOGIC ---
                 max_retries = 1
                 test_passed = False
 
@@ -337,7 +337,7 @@ def run_paccar_hil_test():
                     bus.shutdown()
                     print(f" - Closed {bus_name}")
                 except can.CanError:
-                    # Explicitly catch only CAN-related teardown errors
+                    # Only catch CAN-related teardown errors
                     pass
 
 
