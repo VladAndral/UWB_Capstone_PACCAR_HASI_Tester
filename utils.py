@@ -1,5 +1,6 @@
 import sys, re
 
+# retired in favor of directly specifying file path in command line argument
 def loadFilePath(fileToLoad:str):
     """Loads the file path specified in `filepath.txt`
 

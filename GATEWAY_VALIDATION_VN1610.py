@@ -6,15 +6,13 @@ from can.interfaces import vector
 import random
 from can.interfaces.vector import exceptions as vector_exceptions
 
-# Be Sure to Install python-can
-# pip install python-can
-
 # ==============================================================================
 # ENVIRONMENT & HARDWARE CONFIGURATION
 # ==============================================================================
 
 # Set to True if All 8 CAN Ports are Connected to a Vector Hardware Device Simultaneously
 # Set to False if Using VN1610 + CANcable 2Y Setup
+# NOTE: If set to False, power cycle the ECU when switching channels(sender or receiver) configuration from CAN Classic to CAN FD, as the VN1610A does not support hot-swapping between CAN and CAN-FD modes.
 PACCAR_HIL_ENVIRONMENT = False
 
 # Channels for VN1610A + CANcable 2Y Setup (Ignored if PACCAR_HIL_ENVIRONMENT is True)
@@ -32,11 +30,13 @@ j1939_fd_timing = can.BitTimingFd.from_bitrate_and_segments(
 )
 
 # Make sure this matches the application name configured in Vector Hardware Manager for the VN1640A channels (Default is "CANoe")
+# NOTE: Let's try the 'app_name': None configuration to solve channel configuration lock issues
 VECTOR_APPLICATION_NAME = 'CANoe'
 
 # Profiles
 # STD for J1939 CAN Classic Ports
 # FD for J1939-22 CAN Fast Data Ports
+# NOTE: Let's try the 'app_name': None configuration to solve channel configuration lock issues
 STD_PROFILE = {'fd': False,'bitrate': 500000, 'app_name': VECTOR_APPLICATION_NAME, 'serial': 535823}
 FD_PROFILE  = {'fd': True, 'timing': j1939_fd_timing, 'app_name': VECTOR_APPLICATION_NAME, 'serial': 535823}
 

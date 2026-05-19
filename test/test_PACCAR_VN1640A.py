@@ -7,9 +7,6 @@ from can.interfaces.vector import exceptions as vector_exceptions
 import pytest
 import pytest_check as check
 
-# Be Sure to Install python-can
-# pip install python-can
-
 # type: "pytest test_PACCAR_VN1640A.py -v -s" in terminal to run
 # type: "python -m pytest test/test_PACCAR_VN1640A.py --junitxml=report.xml" in terminal to generate XML
 

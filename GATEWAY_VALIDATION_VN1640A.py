@@ -6,9 +6,6 @@ from can.interfaces import vector
 import random
 from can.interfaces.vector import exceptions as vector_exceptions
 
-# Be Sure to Install python-can
-# pip install python-can
-
 # ==============================================================================
 # HARDWARE CONFIGURATION
 # ==============================================================================
@@ -85,7 +82,7 @@ def run_paccar_hil_test():
         print("-" * 70)
         print(f" Total Unique Routing Paths: {len(route_groups)}") 
 
-        # --- 2. INITIALIZE ALL 8 CHANNELS
+        # --- 2. INITIALIZE ALL 8 CHANNELS ---
         print("\n" + "="*70)
         print("INITIALIZING ALL 8 VECTOR CHANNELS...")
         print("="*70)
@@ -99,7 +96,7 @@ def run_paccar_hil_test():
                     f"[FATAL HARDWARE ERROR] Failed to connect to Vector channel: {bus_name}\n"
                     f"{'!'*70}\n"
                     f"\nPlease check the following:\n"
-                    f"\nIs the Vector VN1640A physically plugged into the USB port?\n"
+                    f"\nIs the Vector VN1640A plugged into the USB port?\n"
                   
                     f"\nOriginal Vector Error: {init_error}\n"
                 ) from None

@@ -2,7 +2,6 @@ __pycache__/
 *.dbc
 *.cfg
 .DS_Store
-filepath.txt
 .vscode/
 *temp*.*
 .venv/
