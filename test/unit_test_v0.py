@@ -58,12 +58,15 @@ NETWORK_CONFIGS = {
 # DATA FLATTENER
 # ==============================================================================
 
-# Please put HASI_Primary_ALL_CAN.dbc in the same folder as this script!
-primaryDBC_filepath = utils.loadFilePath("primaryDBC")
-if not isinstance(primaryDBC_filepath, str): 
-    raise TypeError("filepath was returned as 'None'")
+primaryDBC_filepath = os.getenv("DBC_PATH", "HASI_Primary_ALL_CAN.dbc")
+if not os.path.exists(primaryDBC_filepath):
+    raise FileNotFoundError(
+        f"\n[FATAL CONFIG ERROR] Could not find DBC file at: '{primaryDBC_filepath}'\n"
+        f"Please check your DBC_PATH terminal argument or ensure the default file exists."
+    )
 
-gatewaySpecDict = utils.scrape_dbc_for_gateways(primaryDBC_filepath)
+# Unpack both dictionaries from the scraper
+gatewaySpecDict, messageNameDict = utils.scrape_dbc_for_gateways(primaryDBC_filepath)
 
 test_cases = []
 
