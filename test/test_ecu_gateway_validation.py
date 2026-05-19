@@ -65,17 +65,32 @@ if not os.path.exists(primaryDBC_filepath):
         f"Please check your DBC_PATH terminal argument or ensure the default file exists."
     )
 
-gatewaySpecDict = utils.scrape_dbc_for_gateways(primaryDBC_filepath)
+# Unpack both dictionaries from the scraper
+gatewaySpecDict, messageNameDict = utils.scrape_dbc_for_gateways(primaryDBC_filepath)
 
-# Group tests for parameterization
 test_cases = []
 for arbitrationID_raw, channelList in gatewaySpecDict.items():
+    
+    # 1. Get the Message Name
+    msg_name = messageNameDict.get(arbitrationID_raw, "UNKNOWN_MSG")
+    
+    # 2. Get the mathematically correct Hex ID using your bitwise function
+    masked_id = utils.format_arbitrationID(arbitrationID_raw, "int")
+    hex_id = f"0x{masked_id:08X}"
+    
     for gatewayChannelPair in channelList:
         sender, receiver = gatewayChannelPair.split(":")
         
-        # We append directly to the pytest params list so pytest treats each ID as an isolated test
-        terminal_label = f"GATEWAY: {sender}:{receiver} | ID: {arbitrationID_raw}"
-        test_cases.append(pytest.param(sender, receiver, arbitrationID_raw, id=terminal_label))
+        # 3. Determine the gateway protocol translation
+        sender_protocol = "CAN-FD" if sender in CAN_FD else "CAN Classic"
+        receiver_protocol = "CAN-FD" if receiver in CAN_FD else "CAN Classic"
+        gateway_type = f"{sender_protocol} -> {receiver_protocol}"
+        
+        # 4. Build the ultimate terminal label!
+        terminal_label = f"ROUTE: {sender}:{receiver} | GATEWAY TYPE: {gateway_type} | {msg_name} ({hex_id})"
+        
+        # Pass it into the Pytest parameter ID
+        test_cases.append(pytest.param(sender, receiver, arbitrationID_raw, msg_name, id=terminal_label))
 
 print(f"\n---> WARNING: MAPPED {len(test_cases)} UNIQUE GATEWAY ROUTES <---")
 
@@ -124,8 +139,9 @@ def active_buses():
 # GATEWAY EXECUTION LOGIC (GATHER-ALL ARCHITECTURE)
 # ==============================================================================
 
-@pytest.mark.parametrize("senderName, receiverName, arbitrationID_raw", test_cases)
-def test_paccar_routing_logic(active_buses, senderName, receiverName, arbitrationID_raw, record_property):
+# Add msg_name to the decorator and the function signature
+@pytest.mark.parametrize("senderName, receiverName, arbitrationID_raw, msg_name", test_cases)
+def test_paccar_routing_logic(active_buses, senderName, receiverName, arbitrationID_raw, msg_name, record_property):
     
     # 1. CI/CD Pipeline Tracking Injections
     record_property("sender_node", senderName)
@@ -172,11 +188,11 @@ def test_paccar_routing_logic(active_buses, senderName, receiverName, arbitratio
     elapsed_time_ms = 0.0
 
     # 2. Hardware Retry Loop
-    print(f"\n=== Testing ID: 0x{expected_id:08X} ({gateway_type}) ===")
+    print(f"\n=== Testing: {msg_name} | 0x{expected_id:08X} ({gateway_type}) ===")
     
     for attempt in range(MAX_RETRIES):
         formatted_send_payload = " ".join(f"{x:02x}" for x in msg.data)
-        print(f" [TX] {senderName:<8} : 0x{msg.arbitration_id:08X} | {formatted_send_payload} (Attempt {attempt + 1})")
+        print(f" [TX] {senderName:<8} : 0x{msg.arbitration_id:08X} ({msg_name}) | {formatted_send_payload} (Attempt {attempt + 1})")
 
         # Flush the receive buffer to prevent reading stale frames
         while receiver.recv(0.0) is not None:
