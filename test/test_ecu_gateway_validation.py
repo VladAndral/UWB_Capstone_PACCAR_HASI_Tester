@@ -334,7 +334,7 @@ def test_paccar_routing_logic(
                     found_routed_frame = True
                     break
 
-        # 3. Soft Evaluation (Logs the error but continues the loop)
+        # Soft Evaluation (Logs the error but continues the loop)
         if found_routed_frame and received_message is not None:
             formatted_recv_payload = " ".join(f"{x:02x}" for x in received_message.data)
             print(
@@ -369,7 +369,7 @@ def test_paccar_routing_logic(
         else:
             print("    [FAIL] Gateway dropped the frame (Timeout).")
 
-    # 4. Final Non-Blocking Assertion
+    # Final Non-Blocking Assertion
     # If the hardware never succeeded in MAX_RETRIES attempts, this logs the failure
     # for the terminal summary without crashing the script.
     check.is_true(
