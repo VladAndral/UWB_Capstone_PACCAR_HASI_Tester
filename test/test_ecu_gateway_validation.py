@@ -20,7 +20,7 @@ import dbc_parser
 # NOTE input file path for DBC_PATH environment variable
 # $env:DBC_PATH="C:\Users\garci\Downloads\HASI_Primary_ALL_CAN (5).dbc"; $env:VIRTUAL_MODE="True"; pytest
 # If Vector VN1640A is plugged in with the correct channels connected to the CAN bus and run:
-# $env:DBC_PATH="C:\Users\garci\Downloads\HASI_Primary_ALL_CAN (5).dbc"; $env:VIRTUAL_MODE="False"; pytest
+# $env:DBC_PATH="C:\Users\garci\Downloads\HASI_Primary_ALL_CAN (5).dbc"; pytest
 
 # ==============================================================================
 # HARDWARE & TIMEOUT CONFIGURATION
