@@ -5,7 +5,7 @@ Generates the tabular gateway validation summary in the terminal.
 # ==============================================================================
 # CUSTOM TERMINAL REPORT
 # ==============================================================================
-def pytest_terminal_summary(terminalreporter, exitstatus, config):
+def pytest_terminal_summary(terminalreporter):
     """Generates a clean list of failed IDs at the very end of the run."""
     stats = terminalreporter.stats
 
@@ -14,9 +14,9 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
     if "failed" in stats:
         num_fails = len(stats["failed"])
         # Use .get() to check for passes in case zero tests passed
-        num_successes = len(stats.get("passed", []))       
+        num_successes = len(stats.get("passed", []))
         print(f" GATEWAY TEST SUMMARY ({num_fails} FAILED & {num_successes} PASSED) ")
-        print("=" * 60)      
+        print("=" * 60)
         for test in stats["failed"]:
             if "[" in test.nodeid:
                 tx_rx_arb = test.nodeid.split("[")[-1].rstrip("]")
