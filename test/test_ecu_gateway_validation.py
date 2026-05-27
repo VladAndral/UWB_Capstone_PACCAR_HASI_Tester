@@ -64,8 +64,8 @@ VECTOR_APPLICATION_NAME = "CANoe"
 # FD for J1939-22 CAN Fast Data Ports
 # THE FIX: app_name is set to 'None' to bypass the Vector Hardware Config caching bug.
 # This forces the physical hardware ports to respect our protocol switches.
-STD_PROFILE = {"fd": False, "bitrate": 500000, "app_name": None}
-FD_PROFILE = {"fd": True, "timing": j1939_fd_timing, "app_name": None}
+STD_PROFILE = {"fd": False, "bitrate": 500000, "app_name": "CANoe"}
+FD_PROFILE = {"fd": True, "timing": j1939_fd_timing, "app_name": "CANoe"}
 
 # The Master Channel Dictionary
 NETWORK_CONFIGS = {
