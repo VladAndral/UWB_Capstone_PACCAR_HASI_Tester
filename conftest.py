@@ -51,11 +51,9 @@ def pytest_configure(config):
     # Retrieve the CLI argument
     dbcPath = config.getoption("--dbcPath")
     
-    # Option A: Save it directly to the OS environment so your tests can read it
+    # Save it directly to the OS environment
     os.environ["DBC_PATH"] = dbcPath
 
-    # Retrieve the CLI argument
     userChoice = config.getoption("--virtual")
     
-    # Option A: Save it directly to the OS environment so your tests can read it
     os.environ["VIRTUAL_MODE"] = userChoice
