@@ -4,6 +4,7 @@ Uses Pytest to validate CAN and CAN-FD routing across physical or virtual Vector
 """
 
 import os
+import sys
 import random
 import threading
 import time
@@ -29,7 +30,8 @@ import dbc_parser
 # environmental variable to toggle virtual mode for testing without physical hardware
 # Defaults to False
 env_virtual = os.getenv("VIRTUAL_MODE", "False")
-VIRTUAL_MODE = env_virtual.lower() in ("true", "1", "t")
+# os.environ.get("dhjshfl", "fhsjfdkj")
+VIRTUAL_MODE = env_virtual.lower() == "true"
 
 # Master Configuration Constants
 # DEV NOTE: Set these to 1.0s and 0.1s respectively for final hardware reporting.
@@ -85,16 +87,16 @@ NETWORK_CONFIGS = {
 
 # environmental variable to input the DBC file path
 # defaults to "HASI_Primary_ALL_CAN.dbc" in the current directory
-primary_dbc_filepath = os.getenv("DBC_PATH", "HASI_Primary_ALL_CAN.dbc")
-if not os.path.exists(primary_dbc_filepath):
+dbc_filepath = os.getenv("DBC_PATH", "HASI_Primary_ALL_CAN.dbc")
+if not os.path.exists(dbc_filepath):
     raise FileNotFoundError(
-        f"\n[FATAL CONFIG ERROR] Could not find DBC file at: '{primary_dbc_filepath}'\n"
+        f"\n[FATAL CONFIG ERROR] Could not find DBC file at: '{dbc_filepath}'\n"
         "Please check your DBC_PATH terminal argument or ensure the default file exists."
     )
 
 # Unpack both dictionaries from the scraper
 gateway_spec_dict, message_name_dict = dbc_parser.scrape_dbc_for_gateways(
-    primary_dbc_filepath
+    dbc_filepath
 )
 
 test_cases = []
