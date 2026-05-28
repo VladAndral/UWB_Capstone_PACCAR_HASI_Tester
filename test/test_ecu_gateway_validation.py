@@ -4,7 +4,6 @@ Uses Pytest to validate CAN and CAN-FD routing across physical or virtual Vector
 """
 
 import os
-import sys
 import random
 import threading
 import time
@@ -30,7 +29,6 @@ import dbc_parser
 # environmental variable to toggle virtual mode for testing without physical hardware
 # Defaults to False
 env_virtual = os.getenv("VIRTUAL_MODE", "False")
-# os.environ.get("dhjshfl", "fhsjfdkj")
 VIRTUAL_MODE = env_virtual.lower() == "true"
 
 # Master Configuration Constants
