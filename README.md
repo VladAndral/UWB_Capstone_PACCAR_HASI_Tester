@@ -2,7 +2,7 @@
 
 **Automated Pytest hardware-in-the-loop (HIL) validation suite for the HASI Gateway ECU.**
 
-This repository contains a Python-based test architecture designed to eliminate the manual testing bottleneck for PACCAR's development cycle. It autonomously validates the HASI gateway's routing logic, ensures strict CAN Classic to CAN FD protocol translation accuracy, and automatically generates XML artifacts for enterprise CI/CT pipelines.
+This repository contains a Python-based pytest architecture designed to eliminate the manual testing bottleneck for PACCAR's development cycle. It autonomously validates the HASI gateway's routing logic, ensures CAN Classic to CAN FD protocol translation accuracy, and automatically generates XML artifacts for enterprise CI/CT pipelines.
 
 ---
 
@@ -55,7 +55,7 @@ The suite can be run using the standard `pytest` CLI with our custom configurati
 **Standard Hardware-in-the-Loop Test:**
 To execute the standard test suite with physical hardware connected using the default database (`./HASI_Primary_ALL_CAN.dbc`):
 ```bash
-pytest tests/
+pytest test/
 ```
 
 **Custom Database Path:**
@@ -67,7 +67,7 @@ pytest tests/ --dbcPath ./path/to/your/custom_database.dbc
 **Virtual Hardware Bypass Mode:**
 If physical hardware (Vector/ECU) is unavailable, you can run the suite in virtual mode. This bypasses hardware requirements and intentionally mutates 20% of the TX payloads to verify the script’s pass/fail error-catching logic.
 ```bash
-pytest tests/ --virtual true
+pytest test/ --virtual true
 ```
 
 ---
