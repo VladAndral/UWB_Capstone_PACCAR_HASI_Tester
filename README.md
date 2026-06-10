@@ -53,15 +53,15 @@ pip install -r requirements.txt
 The suite can be run using the standard `pytest` CLI with our custom configuration hooks. 
 
 **Standard Hardware-in-the-Loop Test:**
-To execute the standard test suite with physical hardware connected using the default database (`./HASI_Primary_ALL_CAN.dbc`):
+To execute the standard test suite with physical hardware connected using the default database if it is located in the working directory (`./HASI_Primary_ALL_CAN.dbc`):
 ```bash
 pytest test/
 ```
 
 **Custom Database Path:**
-To run the suite using a different database file:
+To run the suite using a different database file, or if the .dbc file is not in the working directory
 ```bash
-pytest tests/ --dbcPath ./path/to/your/custom_database.dbc
+pytest test/ --dbcPath ./path/to/your/custom_database.dbc
 ```
 
 **Virtual Hardware Bypass Mode:**
