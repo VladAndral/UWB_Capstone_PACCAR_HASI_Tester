@@ -77,6 +77,6 @@ pytest tests/ --virtual true
 Upon completion of the test suite, the host PC automatically aggregates routing successes, timeout failures (1.0s threshold), and mutated frame failures. 
 
 A standard **JUnit XML Report** is generated and saved to:
-`./reports/test_results.xml`
+`./reports/gateway_test_results.xml`
 
 This artifact is fully formatted for downstream integration into PACCAR's enterprise deployment and CI/CT pipelines.
