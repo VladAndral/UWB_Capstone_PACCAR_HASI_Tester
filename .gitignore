@@ -7,4 +7,4 @@ __pycache__/
 .venv/
 .pytest_cache/
 *.log
-paccar_unit.xml
+*.xml
