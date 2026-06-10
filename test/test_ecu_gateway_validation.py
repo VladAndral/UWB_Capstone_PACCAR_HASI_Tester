@@ -33,7 +33,7 @@ VIRTUAL_MODE = env_virtual.lower() == "true"
 
 # Master Configuration Constants
 # DEV NOTE: Set these to 1.0s and 0.1s respectively for final hardware reporting.
-# Lowered to 0.05s and 0.01s for faster virtual development.
+# Lower to 0.05s and 0.01s for faster virtual development.
 ROUTING_TIMEOUT = 1.0   # Seconds to wait for hardware to route the frame
 RECV_POLL_RATE = 0.1    # Interval to check the receive buffer
 MAX_RETRIES = 5         # Hardware retry allowance for processing latency
