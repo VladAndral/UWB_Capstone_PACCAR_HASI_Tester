@@ -82,7 +82,7 @@ def run_paccar_hil_test(primary_dbc_filepath):
     """
     Main execution loop for manual HIL gateway validation.
     """
-    
+
     if not os.path.exists(primary_dbc_filepath):
         raise FileNotFoundError(
             f"\n[FATAL CONFIG ERROR] Could not find DBC file at: '{primary_dbc_filepath}'\n"
@@ -309,6 +309,7 @@ def run_paccar_hil_test(primary_dbc_filepath):
                             print(
                                 f"           Expected   : 0x{expected_id:08X} (FD: {expected_is_fd})"
                             )
+
                             print(
                                 f"           Received   : 0x{received_message.arbitration_id:08X} "
                                 f"(FD: {received_message.is_fd})\n"
@@ -344,14 +345,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Standalone PACCAR HIL Gateway Tester"
     )
-    
+
     parser.add_argument(
         "--dbcPath",
         type=str,
         default="HASI_Primary_ALL_CAN.dbc",
         help="Path to the PACCAR .dbc database file"
     )
-    
+
     args = parser.parse_args()
-    
     run_paccar_hil_test(args.dbcPath)

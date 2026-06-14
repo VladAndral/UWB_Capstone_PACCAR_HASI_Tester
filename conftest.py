@@ -1,13 +1,15 @@
-import pytest
-import os
-
 """
 Pytest configuration and custom reporting hooks.
 Generates the tabular gateway validation summary in the terminal.
 """
+
+import pytest
+
+
 # ==============================================================================
 # CUSTOM TERMINAL REPORT
 # ==============================================================================
+
 def pytest_terminal_summary(terminalreporter):
     """Generates a clean list of failed IDs at the very end of the run."""
     stats = terminalreporter.stats
@@ -29,13 +31,20 @@ def pytest_terminal_summary(terminalreporter):
     elif "passed" in stats:
         num_passes = len(stats["passed"])
         print(f" GATEWAY TEST SUMMARY (100% SUCCESS - {num_passes} ROUTES VERIFIED) ")
+
     print("=" * 60)
 
+
+# ==============================================================================
+# CLI ARGUMENT PARSER
+# ==============================================================================
+
 def pytest_addoption(parser):
+    """Adds custom command-line flags to the Pytest execution command."""
     parser.addoption(
         "--dbcPath",
         action="store",
-        default="./HASI_Primary_ALL_CAN.dbc",
+        default="C:\\path\\to\\your\\HASI_Primary_ALL_CAN.dbc",
         help="enter '--dbcPath <filePath>'"
     )
 
@@ -45,15 +54,4 @@ def pytest_addoption(parser):
         action="store",
         help="enter '--virtual true' to operate without hardware. Defaults to FALSE",
         choices=("true", "false")
-    )
-
-def pytest_configure(config):
-    # Retrieve the CLI argument
-    dbcPath = config.getoption("--dbcPath")
-    
-    # Save it directly to the OS environment
-    os.environ["DBC_PATH"] = dbcPath
-
-    userChoice = config.getoption("--virtual")
-    
-    os.environ["VIRTUAL_MODE"] = userChoice
+        )

@@ -337,7 +337,7 @@ def test_paccar_routing_logic(
                     f"           Received   : 0x{received_message.arbitration_id:08X} "
                     f"(FD: {received_message.is_fd})"
                 )
-                break  
+                break
 
         else:
             print("    [FAIL] Gateway dropped the frame (Timeout).")
