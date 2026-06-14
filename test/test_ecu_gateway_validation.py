@@ -16,20 +16,18 @@ from can.interfaces.vector import exceptions as vector_exceptions
 
 import dbc_parser
 
-# NOTE to run in virtual mode (without physical hardware), run the command below in the terminal.
-# NOTE input file path for DBC_PATH environment variable
-# $env:DBC_PATH="C:\Users\garci\Downloads\HASI_Primary_ALL_CAN (5).dbc"; $env:VIRTUAL_MODE="True"; pytest
-# If Vector VN1640A is plugged in with the correct channels connected to the CAN bus and run:
-# $env:DBC_PATH="C:\Users\garci\Downloads\HASI_Primary_ALL_CAN (5).dbc"; pytest
+# ==============================================================================
+# TERMINAL EXECUTION COMMANDS
+# ==============================================================================
+# Standard execution with physical hardware:
+# pytest tests/ --dbcPath "C:\path\to\your\HASI_Primary_ALL_CAN.dbc"
+#
+# Virtual execution bypass (without physical hardware):
+# pytest tests/ --dbcPath "C:\path\to\your\HASI_Primary_ALL_CAN.dbc" --virtual true
 
 # ==============================================================================
 # HARDWARE & TIMEOUT CONFIGURATION
 # ==============================================================================
-
-# environmental variable to toggle virtual mode for testing without physical hardware
-# Defaults to False
-env_virtual = os.getenv("VIRTUAL_MODE", "False")
-VIRTUAL_MODE = env_virtual.lower() == "true"
 
 # Master Configuration Constants
 # DEV NOTE: Set these to 1.0s and 0.1s respectively for final hardware reporting.
@@ -42,7 +40,6 @@ CAN_CLASSIC = ["VCAN1", "VCAN10", "PCAN1", "PCAN2", "VCAN2", "VCAN20"]
 CAN_FD = ["ADSCAN1", "ADSCAN2"]
 
 # Shared J1939 CAN-FD timing profile
-# May delete if the minimal FD profile works for ADSCAN1 and ADSCAN2
 j1939_fd_timing = can.BitTimingFd.from_bitrate_and_segments(
     f_clock=80_000_000,
     nom_bitrate=500_000,
@@ -56,16 +53,14 @@ j1939_fd_timing = can.BitTimingFd.from_bitrate_and_segments(
 )
 
 # Make sure this matches the application name configured in Vector Hardware Manager
-# for the VN1640A channels (Default is "CANoe")
 VECTOR_APPLICATION_NAME = "CANoe"
 
 # Profiles
 # STD for J1939 CAN Classic Ports
 # FD for J1939-22 CAN Fast Data Ports
-# THE FIX: app_name is set to 'None' to bypass the Vector Hardware Config caching bug.
-# This forces the physical hardware ports to respect our protocol switches.
-STD_PROFILE = {"fd": False, "bitrate": 500000, "app_name": "CANoe"}
-FD_PROFILE = {"fd": True, "timing": j1939_fd_timing, "app_name": "CANoe"}
+# THE FIX: app_name is set to 'CANoe' to force physical hardware ports to respect protocol switches.
+STD_PROFILE = {"fd": False, "bitrate": 500000, "app_name": VECTOR_APPLICATION_NAME}
+FD_PROFILE = {"fd": True, "timing": j1939_fd_timing, "app_name": VECTOR_APPLICATION_NAME}
 
 # The Master Channel Dictionary
 NETWORK_CONFIGS = {
@@ -80,78 +75,80 @@ NETWORK_CONFIGS = {
 }
 
 # ==============================================================================
-# DATA FLATTENER & PARAMETERIZATION
+# DATA FLATTENER & PARAMETERIZATION (Pytest Hook)
 # ==============================================================================
 
-# environmental variable to input the DBC file path
-# defaults to "HASI_Primary_ALL_CAN.dbc" in the current directory
-dbc_filepath = os.getenv("DBC_PATH", "HASI_Primary_ALL_CAN.dbc")
-if not os.path.exists(dbc_filepath):
-    raise FileNotFoundError(
-        f"\n[FATAL CONFIG ERROR] Could not find DBC file at: '{dbc_filepath}'\n"
-        "Please check your DBC_PATH terminal argument or ensure the default file exists."
-    )
+def pytest_generate_tests(metafunc):
+    """
+    Native Pytest hook that dynamically generates test cases based on the 
+    --dbcPath CLI argument passed in the terminal.
+    """
+    # Check if the current test function expects our gateway parameters
+    if "sender_name" in metafunc.fixturenames:
+        
+        # Grab the file path directly from the terminal argument
+        dbc_filepath = metafunc.config.getoption("--dbcPath")
+        
+        if not os.path.exists(dbc_filepath):
+            raise FileNotFoundError(
+                f"\n[FATAL CONFIG ERROR] Could not find DBC file at: '{dbc_filepath}'\n"
+                "Please check your --dbcPath terminal argument."
+            )
 
-# Unpack both dictionaries from the scraper
-gateway_spec_dict, message_name_dict = dbc_parser.scrape_dbc_for_gateways(
-    dbc_filepath
-)
+        # Unpack both dictionaries from the scraper
+        gateway_spec_dict, message_name_dict = dbc_parser.scrape_dbc_for_gateways(dbc_filepath)
 
-test_cases = []
-# Renamed loop variables to prevent scope leaks from shadowing function parameters
-for raw_id, channel_paths in gateway_spec_dict.items():
+        test_cases = []
+        test_ids = []
 
-    # Get the message name for terminal display
-    parsed_msg_name = message_name_dict.get(raw_id, "UNKNOWN_MSG")
+        for raw_id, channel_paths in gateway_spec_dict.items():
+            parsed_msg_name = message_name_dict.get(raw_id, "UNKNOWN_MSG")
+            masked_id = dbc_parser.format_arbitration_id(raw_id, "int")
+            hex_id = f"0x{masked_id:08X}"
 
-    # Get arbitration ID in hex format for terminal display
-    masked_id = dbc_parser.format_arbitration_id(raw_id, "int")
-    hex_id = f"0x{masked_id:08X}"
+            for gateway_channel_pair in channel_paths:
+                src_node, dst_node = gateway_channel_pair.split(":")
 
-    for gateway_channel_pair in channel_paths:
-        src_node, dst_node = gateway_channel_pair.split(":")
+                sender_protocol = "CAN-FD" if src_node in CAN_FD else "CAN Classic"
+                receiver_protocol = "CAN-FD" if dst_node in CAN_FD else "CAN Classic"
+                gateway_type = f"{sender_protocol} -> {receiver_protocol}"
+                route_pair = f"{src_node}:{dst_node}"
 
-        # Determine the gateway protocol translation
-        sender_protocol = "CAN-FD" if src_node in CAN_FD else "CAN Classic"
-        receiver_protocol = "CAN-FD" if dst_node in CAN_FD else "CAN Classic"
-        gateway_type = f"{sender_protocol} -> {receiver_protocol}"
+                terminal_label = (
+                    f"ROUTE: {route_pair:<14} | GATEWAY TYPE: {gateway_type:<27} | "
+                    f"{parsed_msg_name:<42} ({hex_id} | Raw: {raw_id})"
+                )
 
-        # terminal label route_pair is just the sender and receiver
-        # for easy identification in the terminal summary
-        route_pair = f"{src_node}:{dst_node}"
+                test_cases.append((src_node, dst_node, raw_id, parsed_msg_name))
+                test_ids.append(terminal_label)
 
-        # Create human readable test names for each test case to make debugging easier.
-        # These will show up in the pytest output.
-        terminal_label = (
-            f"ROUTE: {route_pair:<14} | GATEWAY TYPE: {gateway_type:<27} | "
-            f"{parsed_msg_name:<42} ({hex_id} | Raw: {raw_id})"
+        # Inject the parameterized data directly into the test suite
+        metafunc.parametrize(
+            "sender_name, receiver_name, arbitration_id_raw, msg_name",
+            test_cases,
+            ids=test_ids
         )
-
-        # We don't want to group the ID's by route because we want the test
-        # to continue even if one of the ID's in the route fails. If we group them,
-        # then one failure would cause us to skip all the ID's in that route.
-        test_cases.append(
-            pytest.param(src_node, dst_node, raw_id, parsed_msg_name, id=terminal_label)
-        )
-
-print(f"\n---> WARNING: MAPPED {len(test_cases)} UNIQUE GATEWAY ROUTES <---")
 
 # ==============================================================================
 # HARDWARE FIXTURE (FAIL-FAST ARCHITECTURE)
 # ==============================================================================
 
 @pytest.fixture(scope="module")
-def active_buses():
+def active_buses(request):
     """Initializes hardware connections. Uses hard fail-fast if hardware is disconnected."""
+    
+    # Grab the virtual flag from the terminal
+    is_virtual = str(request.config.getoption("--virtual")).lower() == "true"
+
     print("\n" + "=" * 70)
-    print(f"INITIALIZING ALL 8 VECTOR CHANNELS (Virtual Mode: {VIRTUAL_MODE})...")
+    print(f"INITIALIZING ALL 8 VECTOR CHANNELS (Virtual Mode: {is_virtual})...")
     print("=" * 70)
 
     connected_buses = {}
 
     try:
         for bus_name, bus_params in NETWORK_CONFIGS.items():
-            if VIRTUAL_MODE:
+            if is_virtual:
                 connected_buses[bus_name] = can.interface.Bus(
                     interface="virtual", channel=bus_name, bitrate=500000
                 )
@@ -163,9 +160,6 @@ def active_buses():
                     can.CanInitializationError,
                     vector_exceptions.VectorInitializationError,
                 ) as init_error:
-                    # If we fail to connect to the Vector channel...
-                    # it's likely a hardware connection issue
-                    # or a misconfiguration in the Vector Hardware Manager.
                     pytest.fail(
                         f"\n[HARDWARE ERROR] Failed to connect to Vector channel: {bus_name}\n"
                         "Is the Vector VN1640A physically plugged into the USB port?\n"
@@ -188,27 +182,16 @@ def active_buses():
 # GATEWAY EXECUTION LOGIC (GATHER-ALL ARCHITECTURE)
 # ==============================================================================
 
-@pytest.mark.parametrize(
-    "sender_name, receiver_name, arbitration_id_raw, msg_name", test_cases
-)
 def test_paccar_routing_logic(
-    active_buses, sender_name, receiver_name, arbitration_id_raw, msg_name, record_property
+    active_buses, sender_name, receiver_name, arbitration_id_raw, msg_name, record_property, request
 ):
     # pylint: disable=redefined-outer-name
     """
     Executes a gateway routing test for a specific CAN/CAN-FD path.
-
-    Injects a generated frame onto the sender bus and verifies that it is
-    correctly translated and routed to the receiver bus within the timeout window.
-
-    Args:
-        active_buses (dict): Dictionary of initialized Vector or Virtual buses.
-        sender_name (str): The origin network port (e.g., 'ADSCAN1').
-        receiver_name (str): The destination network port (e.g., 'VCAN2').
-        arbitration_id_raw (str): The raw decimal arbitration ID from the DBC.
-        msg_name (str): The human-readable name of the CAN message.
-        record_property (fixture): Pytest fixture for custom CI/CD XML reporting.
     """
+    
+    # Grab the virtual flag from the terminal for the fake ECU thread
+    is_virtual = str(request.config.getoption("--virtual")).lower() == "true"
 
     # CI/CD Pipeline Tracking Injections
     record_property("sender_node", sender_name)
@@ -252,8 +235,6 @@ def test_paccar_routing_logic(
             data=dummy_data,
         )
 
-    # Validate payload formatting. Halts execution if the sender_fd boolean fails
-    # to generate a valid envelope, preventing ghost frames.
     if msg is None:
         pytest.fail(f"FATAL SCRIPT LOGIC: Formatting bypassed for ID {arbitration_id_raw}.")
 
@@ -292,32 +273,24 @@ def test_paccar_routing_logic(
         tx_bus.send(msg)
 
         # Virtual Fault Injection Thread
-        if VIRTUAL_MODE:
+        if is_virtual:
             def fake_hardware_gateway():
-                # Simulate hardware processing latency
                 time.sleep(0.015)
-                # Fault Injection: 20% chance to corrupt the ID.
-                # Validates that the test script successfully detects when the ECU fails
-                # to properly gateway the CAN signal between ports.
                 if random.random() < 0.20:
                     injected_id = expected_id ^ 0xFF
                 else:
                     injected_id = expected_id
-                # Force a correct frame format based on what the receiver expects
                 fake_msg = can.Message(
                     is_extended_id=True,
                     is_fd=expected_is_fd,
                     arbitration_id=injected_id,
                     data=expected_data,
                 )
-                # Attach to the receiver's channel to inject the frame
                 with can.interface.Bus(
                     interface="virtual", channel=receiver_name
                 ) as dummy_ecu:
                     dummy_ecu.send(fake_msg)
 
-            # Fire off the fake ECU in the background
-            # so the main test loop can immediately start listening
             threading.Thread(target=fake_hardware_gateway, daemon=True).start()
 
         timeout_end = start_time + ROUTING_TIMEOUT
@@ -364,14 +337,12 @@ def test_paccar_routing_logic(
                     f"           Received   : 0x{received_message.arbitration_id:08X} "
                     f"(FD: {received_message.is_fd})"
                 )
-                break  # Break retry loop, but let pytest_check flag it as a failure
+                break  
 
         else:
             print("    [FAIL] Gateway dropped the frame (Timeout).")
 
     # Final Non-Blocking Assertion
-    # If the hardware never succeeded in MAX_RETRIES attempts, this logs the failure
-    # for the terminal summary without crashing the script.
     check.is_true(
         test_passed, f"Gateway {sender_name}:{receiver_name} FAILED ID {arbitration_id_raw}."
     )

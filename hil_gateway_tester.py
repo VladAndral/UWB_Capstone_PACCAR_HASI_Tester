@@ -7,6 +7,7 @@ import os
 import random
 import time
 import traceback
+import argparse
 
 import can
 from can.interfaces import vector
@@ -77,18 +78,16 @@ ACTIVE_BUSES = {}
 # ==============================================================================
 
 
-def run_paccar_hil_test():
+def run_paccar_hil_test(primary_dbc_filepath):
     """
     Main execution loop for manual HIL gateway validation.
     """
-
-    primary_dbc_filepath = os.getenv("DBC_PATH", "HASI_Primary_ALL_CAN.dbc")
+    
     if not os.path.exists(primary_dbc_filepath):
         raise FileNotFoundError(
             f"\n[FATAL CONFIG ERROR] Could not find DBC file at: '{primary_dbc_filepath}'\n"
             "Please check your DBC_PATH terminal argument or ensure the default file exists."
         )
-
     # Unpack dictionary from the scraper
     gateway_spec_dict, _ = dbc_parser.scrape_dbc_for_gateways(
         primary_dbc_filepath
@@ -342,4 +341,17 @@ def run_paccar_hil_test():
 
 
 if __name__ == "__main__":
-    run_paccar_hil_test()
+    parser = argparse.ArgumentParser(
+        description="Standalone PACCAR HIL Gateway Tester"
+    )
+    
+    parser.add_argument(
+        "--dbcPath",
+        type=str,
+        default="HASI_Primary_ALL_CAN.dbc",
+        help="Path to the PACCAR .dbc database file"
+    )
+    
+    args = parser.parse_args()
+    
+    run_paccar_hil_test(args.dbcPath)
