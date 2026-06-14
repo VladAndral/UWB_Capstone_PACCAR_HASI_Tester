@@ -55,19 +55,19 @@ The suite can be run using the standard `pytest` CLI with our custom configurati
 **Standard Hardware-in-the-Loop Test:**
 To execute the standard test suite with physical hardware connected using the default database if it is located in the working directory (`./HASI_Primary_ALL_CAN.dbc`):
 ```bash
-pytest test/
+pytest tests/
 ```
 
 **Custom Database Path:**
 To run the suite using a different database file, or if the .dbc file is not in the working directory
 ```bash
-pytest test/ --dbcPath ./path/to/your/custom_database.dbc
+pytest tests/ --dbcPath ./path/to/your/custom_database.dbc
 ```
 
 **Virtual Hardware Bypass Mode:**
 If physical hardware (Vector/ECU) is unavailable, you can run the suite in virtual mode. This bypasses hardware requirements and intentionally mutates 20% of the TX payloads to verify the script’s pass/fail error-catching logic.
 ```bash
-pytest test/ --virtual true
+pytest tests/ --virtual true
 ```
 
 ---
